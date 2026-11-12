@@ -1,0 +1,119 @@
+import Link from "next/link";
+import { CheckCircle2, Database, Clock, ShieldCheck, Terminal, Layers } from "lucide-react";
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 sm:p-12">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <header className="border-b border-slate-200 dark:border-slate-800 pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Shordindu Internal
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Daily updates, assignments, and company collaboration platform
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Module 0 Initialized
+            </div>
+          </div>
+        </header>
+
+        {/* Status Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-2">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold text-sm">
+              <Clock className="w-4 h-4 text-primary" />
+              Timezone Standard
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">Asia/Dhaka</p>
+            <p className="text-xs text-slate-500">UTC+6 single source of truth for company calendar days</p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-2">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold text-sm">
+              <Database className="w-4 h-4 text-primary" />
+              Database Engine
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">PostgreSQL + Prisma</p>
+            <p className="text-xs text-slate-500">Prisma client connected with local Docker Compose</p>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-2">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-semibold text-sm">
+              <ShieldCheck className="w-4 h-4 text-primary" />
+              Security Standard
+            </div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">Strict Server Locks</p>
+            <p className="text-xs text-slate-500">HttpOnly sessions, server-side locks & HTML sanitization</p>
+          </div>
+        </div>
+
+        {/* System Health Check Callout */}
+        <div className="p-6 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/20 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                Health Endpoint Verification
+              </h2>
+            </div>
+            <Link
+              href="/api/health"
+              target="_blank"
+              className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+            >
+              Test /api/health →
+            </Link>
+          </div>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            The health check route verifies server uptime, environment configuration, and active database connectivity via Prisma.
+          </p>
+        </div>
+
+        {/* Architecture & Folder Structure Overview */}
+        <section className="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold">
+            <Layers className="w-5 h-5 text-primary" />
+            Project Structure & Utilities
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-600 dark:text-slate-300">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">lib/time.ts</code>
+              <p className="text-xs text-slate-500 mt-1">Shared Dhaka calendar calculations & date comparison</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">lib/sanitize.ts</code>
+              <p className="text-xs text-slate-500 mt-1">Server-side HTML sanitizer & search plain-text extractor</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">lib/permissions.ts</code>
+              <p className="text-xs text-slate-500 mt-1">Role checkers (Admin, HR, Manager, Employee)</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">lib/audit.ts</code>
+              <p className="text-xs text-slate-500 mt-1">Structured audit log recorder for all mutations</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">lib/email.ts</code>
+              <p className="text-xs text-slate-500 mt-1">Email dispatcher adapter (Console, SMTP, Resend)</p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+              <code className="text-xs font-mono font-semibold text-primary">jobs/</code>
+              <p className="text-xs text-slate-500 mt-1">pg-boss background jobs & 7 PM Dhaka reminder cron</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="text-center text-xs text-slate-400 dark:text-slate-600 pt-4">
+          Shordindu Internal &bull; Built with Next.js App Router, Prisma, Tailwind, and shadcn/ui
+        </footer>
+      </div>
+    </main>
+  );
+}
