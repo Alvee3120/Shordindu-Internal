@@ -6,18 +6,26 @@
 
 export type UserRole = "Admin" | "HR" | "Manager" | "Employee";
 
-export function canGrantAdminRole(actorRole: UserRole | null | undefined): boolean {
+export function canGrantAdminRole(
+  actorRole: UserRole | null | undefined
+): boolean {
   return actorRole === "Admin";
 }
 
-export function canManageHolidays(actorRole: UserRole | null | undefined): boolean {
+export function canManageHolidays(
+  actorRole: UserRole | null | undefined
+): boolean {
   return actorRole === "Admin" || actorRole === "HR";
 }
 
-export function canMarkLeaveForOthers(actorRole: UserRole | null | undefined): boolean {
+export function canMarkLeaveForOthers(
+  actorRole: UserRole | null | undefined
+): boolean {
   return actorRole === "Admin" || actorRole === "HR" || actorRole === "Manager";
 }
 
-export function canViewAuditLog(actorRole: UserRole | null | undefined): boolean {
+export function canViewAuditLog(
+  actorRole: UserRole | null | undefined
+): boolean {
   return actorRole === "Admin";
 }

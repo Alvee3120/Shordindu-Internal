@@ -72,17 +72,17 @@ Use exactly this unless I approve a change:
 
 ## 4. Permission table
 
-| Action | Employee | Manager | HR | Admin |
-| --- | --- | --- | --- | --- |
-| Post update, comment, react, create assignment | Yes | Yes | Yes | Yes |
-| Edit or cancel own assignment | Yes | Yes | Yes | Yes |
-| Edit or cancel others' assignment | No | Yes | Yes | Yes |
-| Approve or reject signups, add users, set role | No | Yes | Yes | Yes |
-| Grant the Admin role | No | No | No | Yes |
-| Manage holidays | No | No | Yes | Yes |
-| Mark leave for others | No | Yes | Yes | Yes |
-| See audit log | No | No | No | Yes |
-| See 'Not submitted today' list | No | Yes | Yes | Yes |
+| Action                                         | Employee | Manager | HR  | Admin |
+| ---------------------------------------------- | -------- | ------- | --- | ----- |
+| Post update, comment, react, create assignment | Yes      | Yes     | Yes | Yes   |
+| Edit or cancel own assignment                  | Yes      | Yes     | Yes | Yes   |
+| Edit or cancel others' assignment              | No       | Yes     | Yes | Yes   |
+| Approve or reject signups, add users, set role | No       | Yes     | Yes | Yes   |
+| Grant the Admin role                           | No       | No      | No  | Yes   |
+| Manage holidays                                | No       | No      | Yes | Yes   |
+| Mark leave for others                          | No       | Yes     | Yes | Yes   |
+| See audit log                                  | No       | No      | No  | Yes   |
+| See 'Not submitted today' list                 | No       | Yes     | Yes | Yes   |
 
 A Manager or HR user must never be able to create or promote someone to Admin.
 

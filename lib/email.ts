@@ -11,7 +11,9 @@ export interface EmailPayload {
   text?: string;
 }
 
-export async function sendEmail(payload: EmailPayload): Promise<{ success: boolean; id?: string }> {
+export async function sendEmail(
+  payload: EmailPayload
+): Promise<{ success: boolean; id?: string }> {
   const provider = process.env.EMAIL_PROVIDER || "console";
 
   if (provider === "console" || process.env.NODE_ENV !== "production") {

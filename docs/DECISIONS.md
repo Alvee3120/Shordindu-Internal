@@ -1,4 +1,5 @@
 # Decisions
+
 - Weekend: Friday only (editable setting)
 - Assignment due date: optional
 - Assignments visible to everyone

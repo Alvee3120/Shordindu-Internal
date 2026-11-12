@@ -39,7 +39,10 @@ export async function GET() {
         database: {
           status: "disconnected",
           latencyMs,
-          error: error instanceof Error ? error.message : "Database connection failed",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Database connection failed",
         },
       },
       { status: 503 }

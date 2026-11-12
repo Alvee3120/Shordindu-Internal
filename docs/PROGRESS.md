@@ -1,4 +1,5 @@
 # Progress
+
 - [ ] Module 0: Project setup
 - [ ] Module 1: Database and core utilities
 - [ ] Module 2: Registration and login (OTP)
