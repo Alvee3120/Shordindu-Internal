@@ -1,0 +1,52 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { isApiResponse, requireUserApi } from "@/lib/api";
+import { readJsonBody } from "@/lib/http";
+import { editCommentSchema } from "@/lib/validators";
+import {
+  deleteComment,
+  editComment,
+  interactionError,
+} from "@/lib/interactions";
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const user = await requireUserApi();
+  if (isApiResponse(user)) return user;
+
+  const parsed = editCommentSchema.safeParse(await readJsonBody(request));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Check the comment." },
+      { status: 400 },
+    );
+  }
+
+  const result = await editComment(user, params.id, parsed.data.contentHtml);
+  if (!result.ok) {
+    const { status, message } = interactionError(result.reason);
+    return NextResponse.json({ error: message }, { status });
+  }
+
+  return NextResponse.json({
+    comment: result.data,
+    message: "Comment edited.",
+  });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } },
+) {
+  const user = await requireUserApi();
+  if (isApiResponse(user)) return user;
+
+  const result = await deleteComment(user, params.id);
+  if (!result.ok) {
+    const { status, message } = interactionError(result.reason);
+    return NextResponse.json({ error: message }, { status });
+  }
+
+  return NextResponse.json({ message: "Comment deleted." });
+}

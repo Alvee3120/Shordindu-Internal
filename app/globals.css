@@ -1,3 +1,5 @@
+@import "tippy.js/dist/tippy.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -59,4 +61,66 @@
       "rlig" 1,
       "calt" 1;
   }
+}
+
+@layer components {
+  .tiptap {
+    min-height: 9rem;
+    padding: 0.75rem;
+    outline: none;
+  }
+
+  .tiptap p,
+  .rich-text p {
+    margin-bottom: 0.5rem;
+  }
+
+  .tiptap p:last-child,
+  .rich-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .tiptap ul,
+  .rich-text ul {
+    margin-bottom: 0.5rem;
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+
+  .tiptap ol,
+  .rich-text ol {
+    margin-bottom: 0.5rem;
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+
+  .tiptap a,
+  .rich-text a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+  }
+
+  .rich-text span[data-mention] {
+    color: hsl(var(--primary));
+    font-weight: 500;
+  }
+
+  .tiptap .mention {
+    color: hsl(var(--primary));
+    font-weight: 500;
+  }
+}
+
+.tippy-box[data-theme~="shordindu"] {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.tippy-box[data-theme~="shordindu"] > .tippy-content {
+  padding: 0;
+}
+
+.tippy-box[data-theme~="shordindu"] > .tippy-arrow {
+  display: none;
 }
