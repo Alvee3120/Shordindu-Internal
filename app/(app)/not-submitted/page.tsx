@@ -16,7 +16,9 @@ export default async function NotSubmittedPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Not submitted today</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Not submitted today
+        </h1>
         <p className="text-sm text-muted-foreground">
           {formatDhakaDate(summary.date)} &middot; Active users without an
           update, excluding weekends, holidays and leave.
@@ -49,7 +51,7 @@ export default async function NotSubmittedPage() {
           {summary.missing.map((missing) => (
             <div
               key={missing.id}
-              className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-xl border border-border bg-card p-3 shadow-sm"
             >
               <UserCard
                 name={missing.name}

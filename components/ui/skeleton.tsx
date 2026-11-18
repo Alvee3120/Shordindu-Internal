@@ -6,10 +6,7 @@ export function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "animate-pulse rounded-md bg-slate-200/80 dark:bg-slate-800",
-        className,
-      )}
+      className={cn("animate-pulse rounded-md bg-border", className)}
       {...props}
     />
   );
@@ -17,7 +14,7 @@ export function Skeleton({
 
 export function SkeletonCard() {
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="space-y-3 rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-3">
         <Skeleton className="h-10 w-10 rounded-full" />
         <div className="flex-1 space-y-2">

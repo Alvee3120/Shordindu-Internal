@@ -10,7 +10,7 @@ function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
   return `${first}${last}`.toUpperCase();
 }
 
@@ -29,7 +29,7 @@ export function Avatar({
       className={cn(
         "inline-flex shrink-0 select-none items-center justify-center rounded-full bg-primary/10 font-semibold text-primary",
         sizes[size],
-        className,
+        className
       )}
     >
       {initials(name)}

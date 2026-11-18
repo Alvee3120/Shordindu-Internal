@@ -84,7 +84,7 @@ export function ForgotPasswordForm() {
   if (step === "done") {
     return (
       <div className="space-y-4 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Password updated</h2>
           <p className="text-sm text-muted-foreground">
@@ -218,7 +218,10 @@ export function ForgotPasswordForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Remembered it?{" "}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-primary hover:underline"
+        >
           Back to sign in
         </Link>
       </p>

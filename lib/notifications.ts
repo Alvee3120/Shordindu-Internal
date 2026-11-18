@@ -1,6 +1,6 @@
 import { UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { extractMentionIds } from "@/lib/mentions";
+import { extractMentionIds, extractMentionIdsFromText } from "@/lib/mentions";
 import type { SessionUser } from "@/lib/auth";
 
 export interface NotificationDraft {
@@ -16,7 +16,7 @@ export interface NotificationDraft {
  */
 export async function createNotifications(
   actorId: string | null,
-  drafts: NotificationDraft[],
+  drafts: NotificationDraft[]
 ): Promise<number> {
   const seen = new Set<string>();
   const rows = drafts.filter((draft) => {
@@ -44,19 +44,31 @@ async function activeMentionIds(html: string): Promise<string[]> {
   return users.map((user) => user.id);
 }
 
+/** Same as activeMentionIds, for plain-text comment content. */
+async function activeMentionIdsFromComment(text: string): Promise<string[]> {
+  const ids = extractMentionIdsFromText(text);
+  if (ids.length === 0) return [];
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: ids }, status: UserStatus.Active },
+    select: { id: true },
+  });
+  return users.map((user) => user.id);
+}
+
 /** Notifies the owner plus anyone mentioned after a comment is created. */
 export async function notifyCommentCreated({
   actor,
   targetType,
   targetId,
-  contentHtml,
+  content,
 }: {
   actor: SessionUser;
   targetType: "update" | "assignment";
   targetId: string;
-  contentHtml: string;
+  content: string;
 }): Promise<number> {
-  const mentionIds = await activeMentionIds(contentHtml);
+  const mentionIds = await activeMentionIdsFromComment(content);
   const drafts: NotificationDraft[] = [];
   const alreadyNotified = new Set<string>();
 
@@ -134,7 +146,7 @@ export async function notifyUpdateMentions({
       type: "mention",
       message: `${actor.name} mentioned you in a daily update`,
       link: `/#update-${updateId}`,
-    })),
+    }))
   );
 }
 
@@ -160,7 +172,7 @@ export async function notifyAssignmentCreated({
       type: "assignment",
       message: `${actor.name} assigned you: ${shortSummary}`,
       link: `/assignments#assignment-${assignmentId}`,
-    })),
+    }))
   );
 }
 
@@ -183,6 +195,6 @@ export async function notifyAssignmentStatusChanged({
       type: "assignment_status",
       message: `${actor.name} marked an assignment as ${statusLabel}`,
       link: `/assignments#assignment-${assignmentId}`,
-    })),
+    }))
   );
 }

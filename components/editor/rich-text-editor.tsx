@@ -75,7 +75,7 @@ function ToolbarButton({
       onClick={onClick}
       className={cn(
         "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
-        active && "bg-accent text-accent-foreground",
+        active && "bg-accent text-accent-foreground"
       )}
     >
       {children}
@@ -93,12 +93,7 @@ function addLink(editor: Editor) {
     return;
   }
 
-  editor
-    .chain()
-    .focus()
-    .extendMarkRange("link")
-    .setLink({ href: url })
-    .run();
+  editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
 }
 
 export function RichTextEditor({
@@ -164,11 +159,11 @@ export function RichTextEditor({
     <div
       className={cn(
         "overflow-hidden rounded-lg border border-input bg-background focus-within:ring-2 focus-within:ring-ring",
-        !editable && "opacity-80",
+        !editable && "opacity-80"
       )}
     >
       {editable && editor ? (
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-200 p-1.5 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-0.5 border-b border-border p-1.5">
           <ToolbarButton
             label="Bold"
             active={editor.isActive("bold")}
@@ -213,7 +208,7 @@ export function RichTextEditor({
           >
             <Link2Off className="h-4 w-4" />
           </ToolbarButton>
-          <span className="mx-1 h-5 w-px bg-slate-200 dark:bg-slate-700" />
+          <span className="mx-1 h-5 w-px bg-border" />
           <ToolbarButton
             label="Undo"
             disabled={!editor.can().undo()}

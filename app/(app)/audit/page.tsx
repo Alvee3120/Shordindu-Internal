@@ -26,9 +26,9 @@ function isDate(value: string | undefined): value is string {
 function isUuid(value: string | undefined): value is string {
   return Boolean(
     value &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        value,
-      ),
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value
+    )
   );
 }
 
@@ -49,10 +49,7 @@ export default async function AuditPage({
   const to = isDate(searchParams.to) ? searchParams.to : undefined;
   const requestedPage = Number(searchParams.page) || 1;
 
-  const data = await listAuditLog(
-    { actorId, action, from, to },
-    requestedPage,
-  );
+  const data = await listAuditLog({ actorId, action, from, to }, requestedPage);
 
   const baseParams = new URLSearchParams();
   if (actorId) baseParams.set("actor", actorId);
@@ -79,7 +76,7 @@ export default async function AuditPage({
       <form
         method="get"
         action="/audit"
-        className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-6"
+        className="grid gap-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-6"
       >
         <div className="space-y-1.5">
           <label htmlFor="audit-actor" className="text-sm font-medium">
@@ -194,7 +191,7 @@ export default async function AuditPage({
         {data.entries.map((entry) => (
           <details
             key={entry.id}
-            className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-xl border border-border bg-card shadow-sm"
           >
             <summary className="cursor-pointer list-none p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -213,10 +210,10 @@ export default async function AuditPage({
               </div>
             </summary>
 
-            <div className="space-y-3 border-t border-slate-200 p-3 dark:border-slate-800">
+            <div className="space-y-3 border-t border-border p-3">
               <div className="space-y-1">
                 <p className="text-xs font-medium">Before</p>
-                <pre className="max-h-64 overflow-auto rounded-md bg-slate-50 p-2 text-xs dark:bg-slate-950">
+                <pre className="max-h-64 overflow-auto rounded-md bg-muted/60 p-2 text-xs">
                   {entry.beforeJson === null
                     ? "-"
                     : JSON.stringify(entry.beforeJson, null, 2)}
@@ -224,7 +221,7 @@ export default async function AuditPage({
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium">After</p>
-                <pre className="max-h-64 overflow-auto rounded-md bg-slate-50 p-2 text-xs dark:bg-slate-950">
+                <pre className="max-h-64 overflow-auto rounded-md bg-muted/60 p-2 text-xs">
                   {entry.afterJson === null
                     ? "-"
                     : JSON.stringify(entry.afterJson, null, 2)}

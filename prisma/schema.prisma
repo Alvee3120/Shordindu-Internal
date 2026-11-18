@@ -32,6 +32,11 @@ enum TargetType {
   assignment
 }
 
+enum ReactionKind {
+  like
+  dislike
+}
+
 enum AssignmentPriority {
   normal
   urgent
@@ -140,7 +145,7 @@ model Comment {
   targetId    String     @map("target_id")
   userId      String     @map("user_id")
   user        User       @relation(fields: [userId], references: [id])
-  contentHtml String     @map("content_html")
+  content     String
   createdAt   DateTime   @default(now()) @map("created_at")
   editedAt    DateTime?  @map("edited_at")
   deletedAt   DateTime?  @map("deleted_at")
@@ -151,15 +156,15 @@ model Comment {
 }
 
 model Reaction {
-  id         String     @id @default(uuid())
-  targetType TargetType @map("target_type")
-  targetId   String     @map("target_id")
-  userId     String     @map("user_id")
-  user       User       @relation(fields: [userId], references: [id])
-  emoji      String
-  createdAt  DateTime   @default(now()) @map("created_at")
+  id         String       @id @default(uuid())
+  targetType TargetType   @map("target_type")
+  targetId   String       @map("target_id")
+  userId     String       @map("user_id")
+  user       User         @relation(fields: [userId], references: [id])
+  kind       ReactionKind
+  createdAt  DateTime     @default(now()) @map("created_at")
 
-  @@unique([targetType, targetId, userId, emoji])
+  @@unique([targetType, targetId, userId])
   @@index([targetType, targetId])
   @@map("reactions")
 }

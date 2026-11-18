@@ -25,9 +25,7 @@ export function UpdateInteractions({
       const result = await fetchJson<{
         reactions: ReactionSummaryDto[];
         commentCount: number;
-      }>(
-        `/api/interactions?targetType=${targetType}&targetId=${targetId}`,
-      );
+      }>(`/api/interactions?targetType=${targetType}&targetId=${targetId}`);
       if (!cancelled && result.ok && result.data) {
         setReactions(result.data.reactions);
         setCommentCount(result.data.commentCount);
@@ -40,7 +38,7 @@ export function UpdateInteractions({
   }, [targetType, targetId]);
 
   return (
-    <div className="mt-3 space-y-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+    <div className="mt-3 space-y-3 border-t border-border pt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ReactionBar
           targetType={targetType}

@@ -48,7 +48,7 @@ export function PendingUserRow({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
       <div>
         <p className="font-medium">{user.name}</p>
         <p className="text-sm text-muted-foreground">{user.email}</p>

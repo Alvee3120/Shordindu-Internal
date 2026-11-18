@@ -34,7 +34,7 @@ function TabButton({
       className={`rounded-md px-3 py-2 text-sm font-medium transition ${
         active
           ? "bg-primary text-primary-foreground"
-          : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          : "bg-card text-foreground hover:bg-secondary"
       }`}
     >
       {children}
@@ -67,14 +67,14 @@ export function UserManagement({
     const [pendingResult, usersResult] = await Promise.all([
       fetchList<PendingUserDto>("/api/users/pending"),
       fetchList<ManagedUserDto>(
-        `/api/users?search=${encodeURIComponent(searchTerm)}`,
+        `/api/users?search=${encodeURIComponent(searchTerm)}`
       ),
     ]);
     setLoading(false);
 
     if (!pendingResult.ok || !usersResult.ok) {
       setError(
-        pendingResult.error ?? usersResult.error ?? "Could not load users.",
+        pendingResult.error ?? usersResult.error ?? "Could not load users."
       );
       return;
     }

@@ -31,7 +31,7 @@ export function UpdateCard({
   return (
     <article
       id={`update-${update.id}`}
-      className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className="scroll-mt-24 rounded-xl border border-border bg-card p-4 shadow-sm"
     >
       <header className="flex items-start justify-between gap-3">
         <UserCard
@@ -56,7 +56,7 @@ export function UpdateCard({
 
       {highlightHtml ? (
         <div
-          className="rich-text mt-3 text-sm leading-relaxed [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 [&_mark]:text-amber-950 dark:[&_mark]:bg-amber-400/40 dark:[&_mark]:text-amber-100"
+          className="rich-text mt-3 text-sm leading-relaxed [&_mark]:rounded-sm [&_mark]:bg-gold/55 [&_mark]:px-0.5 [&_mark]:text-foreground"
           dangerouslySetInnerHTML={{ __html: highlightHtml }}
         />
       ) : (
@@ -64,7 +64,7 @@ export function UpdateCard({
       )}
 
       {showActions ? (
-        <footer className="mt-3 flex gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+        <footer className="mt-3 flex gap-2 border-t border-border pt-3">
           {onEdit ? (
             <Button
               size="sm"

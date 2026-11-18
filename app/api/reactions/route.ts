@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     user,
     parsed.data.targetType,
     parsed.data.targetId,
-    parsed.data.emoji,
+    parsed.data.kind,
   );
   if (!result.ok) {
     const { status, message } = interactionError(result.reason);

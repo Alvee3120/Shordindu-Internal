@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
@@ -15,9 +14,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { UserCard } from "@/components/ui/user-card";
+import { Logo } from "@/components/ui/logo";
 import {
   canManageSettings,
   canManageUsers,
@@ -110,26 +110,19 @@ export function AppShell({
   const current = links.find((item) => isActive(pathname, item.href));
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex">
-        <div className="flex h-24 items-center border-b border-slate-200 px-4 dark:border-slate-800">
+    <div className="min-h-screen bg-background">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar lg:flex">
+        <div className="flex h-24 items-center justify-center px-5">
           <Link
             href="/"
             aria-label="Shordindu home"
-            className="rounded-md dark:bg-white/95 dark:p-1.5"
+            className="rounded-lg transition hover:opacity-90"
           >
-            <Image
-              src="/logo.png"
-              alt="Shordindu"
-              width={2944}
-              height={1849}
-              priority
-              className="h-16 w-auto"
-            />
+            <Logo height={54} />
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2">
           {links.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -141,8 +134,8 @@ export function AppShell({
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
+                    ? "bg-gold text-gold-foreground"
+                    : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -152,31 +145,27 @@ export function AppShell({
           })}
         </nav>
 
-        <div className="border-t border-slate-200 p-3 dark:border-slate-800">
+        <div className="p-3">
+          <SignOutButton />
+          <div className="my-2 border-t border-white/10" />
           <UserCard
             name={user.name}
             position={user.position}
             department={user.department}
             size="sm"
+            tone="light"
           />
         </div>
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-6">
           <Link
             href="/"
             aria-label="Shordindu home"
-            className="flex items-center rounded-md dark:bg-white/95 dark:p-1 lg:hidden"
+            className="flex items-center rounded-lg bg-primary px-2.5 py-1.5 lg:hidden"
           >
-            <Image
-              src="/logo.png"
-              alt="Shordindu"
-              width={2944}
-              height={1849}
-              priority
-              className="h-11 w-auto"
-            />
+            <Logo height={26} />
           </Link>
           <p className="hidden text-sm font-medium text-muted-foreground lg:block">
             {current?.label ?? ""}
@@ -184,12 +173,11 @@ export function AppShell({
 
           <div className="flex items-center gap-1.5">
             <NotificationBell />
-            <ThemeToggle />
             <UserMenu user={user} />
           </div>
         </header>
 
-        <nav className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-2 py-2 dark:border-slate-800 dark:bg-slate-900 lg:hidden">
+        <nav className="flex flex-wrap gap-1 border-b border-border bg-card px-2 py-2 lg:hidden">
           {links.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -201,8 +189,8 @@ export function AppShell({
                 className={cn(
                   "flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition",
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -212,7 +200,7 @@ export function AppShell({
           })}
         </nav>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           {children}
         </main>
       </div>

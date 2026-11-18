@@ -6,60 +6,71 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Canvas and ink: pine #0E3536 on a warm, teal-tinted paper */
+    --background: 180 22% 97%;
+    --foreground: 183 58% 13%;
+
+    /* Raised surfaces stay crisp white against the tinted canvas */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 183 58% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 183 58% 13%;
+
+    /* Brand pine */
+    --primary: 183 58% 13%;
+    --primary-foreground: 40 55% 96%;
+
+    /* Brand amber #F5A847 — always paired with pine ink for legibility */
+    --gold: 34 90% 62%;
+    --gold-foreground: 183 58% 13%;
+
+    /* Quiet surfaces */
+    --secondary: 180 16% 93%;
+    --secondary-foreground: 183 50% 16%;
+    --muted: 180 16% 94%;
+    --muted-foreground: 185 12% 37%;
+    --accent: 35 92% 93%;
+    --accent-foreground: 30 60% 24%;
+
+    --destructive: 6 58% 42%;
+    --destructive-foreground: 40 55% 96%;
+
+    --border: 182 16% 87%;
+    --input: 182 16% 83%;
+    --ring: 32 82% 36%;
+
+    /* Pine rail that carries the brand */
+    --sidebar: 183 58% 13%;
+    --sidebar-foreground: 40 44% 95%;
+    --sidebar-muted: 183 22% 70%;
+    --sidebar-accent: 183 42% 19%;
+
+    --radius: 0.75rem;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--gold) / 0.4);
   }
 }
 
@@ -103,12 +114,33 @@
 
   .rich-text span[data-mention] {
     color: hsl(var(--primary));
-    font-weight: 500;
+    font-weight: 600;
+    background: hsl(var(--gold) / 0.25);
+    border-radius: 0.25rem;
+    padding: 0 0.125rem;
   }
 
   .tiptap .mention {
     color: hsl(var(--primary));
-    font-weight: 500;
+    font-weight: 600;
+    background: hsl(var(--gold) / 0.3);
+    border-radius: 0.25rem;
+    padding: 0 0.125rem;
+  }
+
+  .mention {
+    color: hsl(var(--primary));
+    font-weight: 600;
+    background: hsl(var(--gold) / 0.3);
+    border-radius: 0.25rem;
+    padding: 0 0.125rem;
+  }
+
+  .rich-text mark {
+    background: hsl(var(--gold) / 0.55);
+    color: hsl(var(--foreground));
+    border-radius: 0.125rem;
+    padding: 0 0.125rem;
   }
 }
 

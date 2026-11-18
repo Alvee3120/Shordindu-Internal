@@ -138,7 +138,7 @@ export function LeaveView({
         userId: leaveUserId || undefined,
         fromDate: leaveFrom,
         toDate: leaveTo,
-      },
+      }
     );
     setSavingLeave(false);
 
@@ -162,7 +162,7 @@ export function LeaveView({
     const result = await callApiJson<{ holiday: HolidayDto }>(
       "/api/holidays",
       "POST",
-      { date: holidayDate, name: holidayName },
+      { date: holidayDate, name: holidayName }
     );
     setSavingHoliday(false);
 
@@ -180,7 +180,7 @@ export function LeaveView({
     const result = await callApiJson<{ holiday: HolidayDto }>(
       `/api/holidays/${id}`,
       "PATCH",
-      { date: editDate, name: editName },
+      { date: editDate, name: editName }
     );
 
     if (!result.ok) {
@@ -210,7 +210,7 @@ export function LeaveView({
     setWeekendDays((previous) =>
       previous.includes(day)
         ? previous.filter((value) => value !== day)
-        : [...previous, day].sort((a, b) => a - b),
+        : [...previous, day].sort((a, b) => a - b)
     );
   }
 
@@ -219,7 +219,7 @@ export function LeaveView({
     const result = await callApiJson<{ days: number[] }>(
       "/api/settings/weekend",
       "PATCH",
-      { days: weekendDays },
+      { days: weekendDays }
     );
     setSavingWeekend(false);
 
@@ -262,7 +262,7 @@ export function LeaveView({
           className={`rounded-md px-3 py-2 text-sm font-medium transition ${
             tab === "leave"
               ? "bg-primary text-primary-foreground"
-              : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              : "bg-card text-foreground hover:bg-secondary"
           }`}
         >
           Leave
@@ -273,7 +273,7 @@ export function LeaveView({
           className={`rounded-md px-3 py-2 text-sm font-medium transition ${
             tab === "holidays"
               ? "bg-primary text-primary-foreground"
-              : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              : "bg-card text-foreground hover:bg-secondary"
           }`}
         >
           Holidays
@@ -297,9 +297,7 @@ export function LeaveView({
                       <select
                         id="leave-user"
                         value={leaveUserId}
-                        onChange={(event) =>
-                          setLeaveUserId(event.target.value)
-                        }
+                        onChange={(event) => setLeaveUserId(event.target.value)}
                         className={inputClass}
                         disabled={savingLeave}
                       >
@@ -358,7 +356,7 @@ export function LeaveView({
             {leaves.map((leave) => (
               <div
                 key={leave.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card p-3 shadow-sm"
               >
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium">{leave.name}</p>
@@ -483,7 +481,7 @@ export function LeaveView({
             {holidays.map((holiday) => (
               <div
                 key={holiday.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card p-3 shadow-sm"
               >
                 {editingId === holiday.id ? (
                   <div className="flex flex-1 flex-wrap items-end gap-2">

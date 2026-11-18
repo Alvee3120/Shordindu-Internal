@@ -46,13 +46,13 @@ function AssigneeRow({
 
   async function update(
     status: "pending" | "in_progress" | "done",
-    withNote?: string,
+    withNote?: string
   ) {
     setPending(true);
     const result = await callApiJson<{ assignment: AssignmentDto }>(
       `/api/assignments/${assignment.id}/status`,
       "POST",
-      { status, note: status === "done" ? withNote ?? "" : undefined },
+      { status, note: status === "done" ? (withNote ?? "") : undefined }
     );
     setPending(false);
 
@@ -68,7 +68,7 @@ function AssigneeRow({
   }
 
   return (
-    <div className="space-y-2 rounded-md border border-slate-200 p-2 dark:border-slate-800">
+    <div className="space-y-2 rounded-md border border-border p-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <UserCard
           name={assignee.name}
@@ -170,7 +170,7 @@ export function AssignmentCard({
     setPending(true);
     const result = await callApi(
       `/api/assignments/${assignment.id}/cancel`,
-      "POST",
+      "POST"
     );
     setPending(false);
     if (!result.ok) {
@@ -185,10 +185,7 @@ export function AssignmentCard({
     if (!window.confirm("Delete this assignment? It is removed for everyone."))
       return;
     setPending(true);
-    const result = await callApi(
-      `/api/assignments/${assignment.id}`,
-      "DELETE",
-    );
+    const result = await callApi(`/api/assignments/${assignment.id}`, "DELETE");
     setPending(false);
     if (!result.ok) {
       toast.show(result.error ?? "Could not delete the assignment.", "error");
@@ -201,7 +198,7 @@ export function AssignmentCard({
   return (
     <article
       id={`assignment-${assignment.id}`}
-      className="scroll-mt-24 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className="scroll-mt-24 space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm"
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <UserCard
@@ -263,7 +260,7 @@ export function AssignmentCard({
           onCancel={() => setEditing(false)}
         />
       ) : assignment.canManage ? (
-        <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+        <div className="flex flex-wrap gap-2 border-t border-border pt-3">
           <Button
             size="sm"
             variant="outline"
@@ -287,7 +284,7 @@ export function AssignmentCard({
               size="sm"
               variant="ghost"
               className={cn(
-                "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                "text-destructive hover:bg-destructive/10 hover:text-destructive"
               )}
               onClick={() => void removeAssignment()}
               disabled={pending}
@@ -299,10 +296,7 @@ export function AssignmentCard({
         </div>
       ) : null}
 
-      <UpdateInteractions
-        targetType="assignment"
-        targetId={assignment.id}
-      />
+      <UpdateInteractions targetType="assignment" targetId={assignment.id} />
     </article>
   );
 }

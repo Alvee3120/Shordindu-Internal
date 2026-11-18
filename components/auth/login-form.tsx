@@ -83,10 +83,7 @@ export function LoginForm() {
       </Button>
 
       <div className="flex items-center justify-between text-sm">
-        <Link
-          href="/forgot-password"
-          className="text-primary hover:underline"
-        >
+        <Link href="/forgot-password" className="text-primary hover:underline">
           Forgot password?
         </Link>
         <Link href="/register" className="text-primary hover:underline">

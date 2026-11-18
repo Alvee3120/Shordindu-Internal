@@ -6,10 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { UpdateCard } from "@/components/updates/update-card";
+import {
+  DateFilter,
+  type DateFilterValue,
+} from "@/components/feed/date-filter";
 import { fetchJson } from "@/components/api-client";
-import type { FeedItemDto, PersonDto } from "@/components/feed/types";
-
-type DateMode = "today" | "single" | "range";
+import type { FeedItemDto } from "@/components/feed/types";
 
 const inputClass =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -19,15 +21,17 @@ function FilterField({
   label,
   children,
 }: {
-  htmlFor: string;
-  label: string;
+  htmlFor?: string;
+  label?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
-        {label}
-      </label>
+      {label ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+        </label>
+      ) : null}
       {children}
     </div>
   );
@@ -40,15 +44,13 @@ export function Feed({
   today: string;
   departments: string[];
 }) {
-  const [dateMode, setDateMode] = useState<DateMode>("today");
-  const [singleDate, setSingleDate] = useState(today);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
-  const [personId, setPersonId] = useState("");
+  const [dates, setDates] = useState<DateFilterValue>({
+    from: today,
+    to: today,
+  });
   const [department, setDepartment] = useState("");
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [people, setPeople] = useState<PersonDto[]>([]);
   const [items, setItems] = useState<FeedItemDto[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,29 +64,13 @@ export function Feed({
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => {
-    void (async () => {
-      const result = await fetchJson<{ people: PersonDto[] }>("/api/people");
-      if (result.ok && result.data) setPeople(result.data.people);
-    })();
-  }, []);
-
   const queryFor = useCallback(
     (cursor: string | null) => {
       const params = new URLSearchParams();
 
-      if (dateMode === "today") {
-        params.set("from", today);
-        params.set("to", today);
-      } else if (dateMode === "single") {
-        params.set("from", singleDate);
-        params.set("to", singleDate);
-      } else {
-        params.set("from", from);
-        params.set("to", to);
-      }
+      params.set("from", dates.from);
+      params.set("to", dates.to);
 
-      if (personId) params.set("userId", personId);
       if (department) params.set("department", department);
       if (appliedSearch) params.set("q", appliedSearch);
       if (cursor) params.set("cursor", cursor);
@@ -92,31 +78,13 @@ export function Feed({
 
       return params.toString();
     },
-    [
-      dateMode,
-      today,
-      singleDate,
-      from,
-      to,
-      personId,
-      department,
-      appliedSearch,
-    ],
+    [dates, department, appliedSearch]
   );
 
   const load = useCallback(
     async (cursor: string | null) => {
       const replace = cursor === null;
       if (replace) {
-        const incomplete =
-          (dateMode === "single" && !singleDate) ||
-          (dateMode === "range" && (!from || !to));
-        if (incomplete) {
-          setItems([]);
-          setNextCursor(null);
-          setLoading(false);
-          return;
-        }
         setLoading(true);
         setNextCursor(null);
         setError(null);
@@ -141,11 +109,11 @@ export function Feed({
 
       const page = result.data;
       setItems((previous) =>
-        replace ? page.items : [...previous, ...page.items],
+        replace ? page.items : [...previous, ...page.items]
       );
       setNextCursor(page.nextCursor);
     },
-    [queryFor, dateMode, singleDate, from, to],
+    [queryFor]
   );
 
   useEffect(() => {
@@ -162,7 +130,7 @@ export function Feed({
           void load(nextCursor);
         }
       },
-      { rootMargin: "300px" },
+      { rootMargin: "300px" }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -178,75 +146,8 @@ export function Feed({
       </header>
 
       <Card>
-        <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 sm:pt-5 lg:grid-cols-4">
-          <FilterField htmlFor="feed-date-mode" label="Date">
-            <select
-              id="feed-date-mode"
-              value={dateMode}
-              onChange={(event) =>
-                setDateMode(event.target.value as DateMode)
-              }
-              className={inputClass}
-            >
-              <option value="today">Today</option>
-              <option value="single">Pick a date</option>
-              <option value="range">Date range</option>
-            </select>
-          </FilterField>
-
-          {dateMode === "single" ? (
-            <FilterField htmlFor="feed-date" label="On">
-              <input
-                id="feed-date"
-                type="date"
-                value={singleDate}
-                max={today}
-                onChange={(event) => setSingleDate(event.target.value)}
-                className={inputClass}
-              />
-            </FilterField>
-          ) : null}
-
-          {dateMode === "range" ? (
-            <>
-              <FilterField htmlFor="feed-from" label="From">
-                <input
-                  id="feed-from"
-                  type="date"
-                  value={from}
-                  max={to || today}
-                  onChange={(event) => setFrom(event.target.value)}
-                  className={inputClass}
-                />
-              </FilterField>
-              <FilterField htmlFor="feed-to" label="To">
-                <input
-                  id="feed-to"
-                  type="date"
-                  value={to}
-                  max={today}
-                  onChange={(event) => setTo(event.target.value)}
-                  className={inputClass}
-                />
-              </FilterField>
-            </>
-          ) : null}
-
-          <FilterField htmlFor="feed-person" label="Person">
-            <select
-              id="feed-person"
-              value={personId}
-              onChange={(event) => setPersonId(event.target.value)}
-              className={inputClass}
-            >
-              <option value="">Everyone</option>
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name} - {person.department}
-                </option>
-              ))}
-            </select>
-          </FilterField>
+        <CardContent className="grid gap-3 pt-4 sm:pt-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,1.6fr)] lg:items-end">
+          <DateFilter value={dates} today={today} onChange={setDates} />
 
           <FilterField htmlFor="feed-department" label="Department">
             <select
@@ -264,7 +165,7 @@ export function Feed({
             </select>
           </FilterField>
 
-          <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+          <div className="space-y-1.5">
             <label htmlFor="feed-search" className="text-sm font-medium">
               Search
             </label>
@@ -274,7 +175,7 @@ export function Feed({
                 id="feed-search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search a person's name or a keyword"
+                placeholder="Search a keyword"
                 className={`${inputClass} pl-9`}
               />
             </div>
@@ -302,7 +203,7 @@ export function Feed({
           <EmptyState
             icon={Newspaper}
             title="No updates found"
-            description="Try another date, person, department or search term."
+            description="Try another date, department or search term."
           />
         ) : null}
 

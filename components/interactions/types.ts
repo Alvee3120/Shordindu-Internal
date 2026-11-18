@@ -1,10 +1,12 @@
+export type ReactionKindDto = "like" | "dislike";
+
 export interface ReactionUserDto {
   id: string;
   name: string;
 }
 
 export interface ReactionSummaryDto {
-  emoji: string;
+  kind: ReactionKindDto;
   count: number;
   users: ReactionUserDto[];
   reactedByMe: boolean;
@@ -18,7 +20,7 @@ export interface CommentDto {
     position: string;
     department: string;
   };
-  contentHtml: string;
+  content: string;
   createdAt: string;
   editedAt: string | null;
   canEdit: boolean;

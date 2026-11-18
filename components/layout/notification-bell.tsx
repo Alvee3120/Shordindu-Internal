@@ -90,9 +90,9 @@ export function NotificationBell() {
           />
           <div
             role="menu"
-            className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900"
+            className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
           >
-            <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2">
               <p className="text-sm font-semibold">Notifications</p>
               {unreadCount > 0 ? (
                 <button
@@ -128,21 +128,21 @@ export function NotificationBell() {
                     void markRead(notification.id);
                   }}
                   className={cn(
-                    "flex gap-2 border-b border-slate-100 px-3 py-2 text-sm last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800",
-                    !notification.readAt && "bg-primary/5",
+                    "flex gap-2 border-b border-border px-3 py-2 text-sm last:border-0 hover:bg-muted",
+                    !notification.readAt && "bg-primary/5"
                   )}
                 >
                   <span
                     className={cn(
                       "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-                      notification.readAt ? "bg-transparent" : "bg-primary",
+                      notification.readAt ? "bg-transparent" : "bg-primary"
                     )}
                   />
                   <span className="min-w-0 flex-1">
                     <span
                       className={cn(
                         "block",
-                        !notification.readAt && "font-medium",
+                        !notification.readAt && "font-medium"
                       )}
                     >
                       {notification.message}

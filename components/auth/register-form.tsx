@@ -143,7 +143,7 @@ export function RegisterForm({ departments }: { departments: string[] }) {
   if (step === "done") {
     return (
       <div className="space-y-4 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Waiting for approval</h2>
           <p className="text-sm text-muted-foreground">
@@ -151,10 +151,7 @@ export function RegisterForm({ departments }: { departments: string[] }) {
             can sign in.
           </p>
         </div>
-        <Link
-          href="/login"
-          className={buttonVariants({ className: "w-full" })}
-        >
+        <Link href="/login" className={buttonVariants({ className: "w-full" })}>
           Go to sign in
         </Link>
       </div>
@@ -328,7 +325,10 @@ export function RegisterForm({ departments }: { departments: string[] }) {
 
       <p className="text-center text-sm text-muted-foreground">
         Already registered?{" "}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-primary hover:underline"
+        >
           Sign in
         </Link>
       </p>

@@ -23,7 +23,7 @@ export async function PATCH(
     );
   }
 
-  const result = await editComment(user, params.id, parsed.data.contentHtml);
+  const result = await editComment(user, params.id, parsed.data.content);
   if (!result.ok) {
     const { status, message } = interactionError(result.reason);
     return NextResponse.json({ error: message }, { status });

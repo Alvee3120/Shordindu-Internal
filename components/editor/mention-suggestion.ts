@@ -35,7 +35,7 @@ function escapeHtml(value: string): string {
 }
 
 export function createMentionSuggestion(
-  getUsers: () => MentionUser[],
+  getUsers: () => MentionUser[]
 ): Omit<SuggestionOptions<MentionUser>, "editor"> {
   return {
     char: "@",
@@ -68,14 +68,12 @@ export function createMentionSuggestion(
           const button = document.createElement("button");
           button.type = "button";
           button.className = `flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${
-            index === selected
-              ? "bg-slate-100 dark:bg-slate-800"
-              : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            index === selected ? "bg-secondary " : "hover:bg-muted "
           }`;
           button.innerHTML = `<span class="font-medium">${escapeHtml(
-            user.name,
+            user.name
           )}</span><span class="text-xs text-muted-foreground">${escapeHtml(
-            user.department,
+            user.department
           )}</span>`;
           button.addEventListener("mousedown", (event) => {
             event.preventDefault();
@@ -91,7 +89,7 @@ export function createMentionSuggestion(
         selected = 0;
         element = document.createElement("div");
         element.className =
-          "z-50 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900";
+          "z-50 w-64 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-lg ";
         paint();
 
         if (!props.clientRect) return;
@@ -157,7 +155,12 @@ export function createMentionSuggestion(
         popup = null;
       };
 
-      return { onStart: start, onUpdate: update, onKeyDown: keyDown, onExit: exit };
+      return {
+        onStart: start,
+        onUpdate: update,
+        onKeyDown: keyDown,
+        onExit: exit,
+      };
     },
   };
 }

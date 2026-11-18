@@ -26,11 +26,7 @@ const VIEW_LABELS: Record<View, string> = {
   all: "All assignments",
 };
 
-export function AssignmentsView({
-  departments,
-}: {
-  departments: string[];
-}) {
+export function AssignmentsView({ departments }: { departments: string[] }) {
   const toast = useToast();
   const [view, setView] = useState<View>("to_me");
   const [personId, setPersonId] = useState("");
@@ -47,7 +43,7 @@ export function AssignmentsView({
   useEffect(() => {
     void (async () => {
       const result = await fetchJson<{ people: PersonOptionDto[] }>(
-        "/api/people",
+        "/api/people"
       );
       if (result.ok && result.data) setPeople(result.data.people);
     })();
@@ -63,7 +59,7 @@ export function AssignmentsView({
     if (dueTo) params.set("dueTo", dueTo);
 
     const result = await fetchJson<{ assignments: AssignmentDto[] }>(
-      `/api/assignments?${params.toString()}`,
+      `/api/assignments?${params.toString()}`
     );
     setLoading(false);
 
@@ -128,7 +124,7 @@ export function AssignmentsView({
             className={`rounded-md px-3 py-2 text-sm font-medium transition ${
               view === item
                 ? "bg-primary text-primary-foreground"
-                : "bg-white text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                : "bg-card text-foreground hover:bg-secondary"
             }`}
           >
             {VIEW_LABELS[item]}
@@ -139,7 +135,10 @@ export function AssignmentsView({
       <Card>
         <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 sm:pt-5 lg:grid-cols-5">
           <div className="space-y-1.5">
-            <label htmlFor="assignment-filter-person" className="text-sm font-medium">
+            <label
+              htmlFor="assignment-filter-person"
+              className="text-sm font-medium"
+            >
               Person
             </label>
             <select
@@ -180,7 +179,10 @@ export function AssignmentsView({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="assignment-filter-status" className="text-sm font-medium">
+            <label
+              htmlFor="assignment-filter-status"
+              className="text-sm font-medium"
+            >
               Status
             </label>
             <select
@@ -197,7 +199,10 @@ export function AssignmentsView({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="assignment-filter-from" className="text-sm font-medium">
+            <label
+              htmlFor="assignment-filter-from"
+              className="text-sm font-medium"
+            >
               Due from
             </label>
             <input
@@ -210,7 +215,10 @@ export function AssignmentsView({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="assignment-filter-to" className="text-sm font-medium">
+            <label
+              htmlFor="assignment-filter-to"
+              className="text-sm font-medium"
+            >
               Due to
             </label>
             <input

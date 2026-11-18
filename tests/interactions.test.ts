@@ -1,4 +1,12 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { Role, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth";
@@ -74,10 +82,7 @@ afterAll(async () => {
   const updateIds = updates.map((update) => update.id);
   const comments = await prisma.comment.findMany({
     where: {
-      OR: [
-        { userId: { in: createdUserIds } },
-        { targetId: { in: updateIds } },
-      ],
+      OR: [{ userId: { in: createdUserIds } }, { targetId: { in: updateIds } }],
     },
     select: { id: true },
   });
@@ -86,10 +91,7 @@ afterAll(async () => {
 
   await prisma.reaction.deleteMany({
     where: {
-      OR: [
-        { userId: { in: createdUserIds } },
-        { targetId: { in: targetIds } },
-      ],
+      OR: [{ userId: { in: createdUserIds } }, { targetId: { in: targetIds } }],
     },
   });
   await prisma.mention.deleteMany({
@@ -118,7 +120,7 @@ describe("comments", () => {
     vi.useRealTimers();
   });
 
-  it("adds a sanitized comment, stores mentions and audits it", async () => {
+  it("adds a plain-text comment, stores mentions and audits it", async () => {
     const author = await createUser("Comment Author");
     const owner = await createUser("Update Owner");
     const mentioned = await createUser("Mentioned Person");
@@ -128,12 +130,13 @@ describe("comments", () => {
       author,
       "update",
       updateId,
-      `<p>Hi <span data-mention="${mentioned.id}">@Mentioned</span> and <span data-mention="00000000-0000-4000-8000-000000000000">@Ghost</span></p><script>alert(1)</script>`,
+      `Hi @[Mentioned](${mentioned.id}) and @[Ghost](00000000-0000-4000-8000-000000000000)`
     );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.contentHtml).not.toContain("script");
+    expect(result.data.content).toContain("Hi @[Mentioned]");
+    expect(result.data.content).not.toContain("<");
 
     const mentions = await prisma.mention.findMany({
       where: { targetType: "comment", targetId: result.data.id },
@@ -147,6 +150,54 @@ describe("comments", () => {
     expect(audit).not.toBeNull();
   });
 
+  it("turns a typed @name into a stored mention", async () => {
+    const author = await createUser("Typing Author");
+    const owner = await createUser("Owner");
+    const mentioned = await createUser("Mary Ann Smith");
+    const updateId = await createTargetUpdate(owner);
+
+    const created = await createComment(
+      author,
+      "update",
+      updateId,
+      "Thanks @Mary Ann Smith for the help"
+    );
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    expect(created.data.content).toContain(
+      `@[Mary Ann Smith](${mentioned.id})`
+    );
+
+    const mentions = await prisma.mention.findMany({
+      where: { targetType: "comment", targetId: created.data.id },
+    });
+    expect(mentions).toHaveLength(1);
+    expect(mentions[0]?.mentionedUserId).toBe(mentioned.id);
+  });
+
+  it("leaves an unknown @name as plain text", async () => {
+    const author = await createUser("Unknown Author");
+    const owner = await createUser("Owner");
+    const updateId = await createTargetUpdate(owner);
+
+    const created = await createComment(
+      author,
+      "update",
+      updateId,
+      "Hello @Nobody Here"
+    );
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    expect(created.data.content).toBe("Hello @Nobody Here");
+    expect(
+      await prisma.mention.count({
+        where: { targetType: "comment", targetId: created.data.id },
+      })
+    ).toBe(0);
+  });
+
   it("accepts comments on an update that is locked for its owner", async () => {
     const author = await createUser("Commenter");
     const owner = await createUser("Locked Owner");
@@ -156,7 +207,7 @@ describe("comments", () => {
       author,
       "update",
       updateId,
-      "<p>Still allowed</p>",
+      "Still allowed"
     );
 
     expect(result.ok).toBe(true);
@@ -166,16 +217,11 @@ describe("comments", () => {
     const author = await createUser("Editor");
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
-    const created = await createComment(
-      author,
-      "update",
-      updateId,
-      "<p>Original</p>",
-    );
+    const created = await createComment(author, "update", updateId, "Original");
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
-    const edited = await editComment(author, created.data.id, "<p>Updated</p>");
+    const edited = await editComment(author, created.data.id, "Updated");
 
     expect(edited.ok).toBe(true);
     if (edited.ok) expect(edited.data.editedAt).not.toBeNull();
@@ -190,20 +236,16 @@ describe("comments", () => {
     const author = await createUser("Late Editor");
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
-    const created = await createComment(
-      author,
-      "update",
-      updateId,
-      "<p>Same day</p>",
-    );
+    const created = await createComment(author, "update", updateId, "Same day");
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
     vi.setSystemTime(new Date("2026-11-17T19:00:00Z")); // 01:00 next day
 
-    expect(
-      await editComment(author, created.data.id, "<p>Too late</p>"),
-    ).toEqual({ ok: false, reason: "locked" });
+    expect(await editComment(author, created.data.id, "Too late")).toEqual({
+      ok: false,
+      reason: "locked",
+    });
     expect(await deleteComment(author, created.data.id)).toEqual({
       ok: false,
       reason: "locked",
@@ -215,18 +257,14 @@ describe("comments", () => {
     const other = await createUser("Other");
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
-    const created = await createComment(
-      author,
-      "update",
-      updateId,
-      "<p>Mine</p>",
-    );
+    const created = await createComment(author, "update", updateId, "Mine");
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
-    expect(
-      await editComment(other, created.data.id, "<p>Hijack</p>"),
-    ).toEqual({ ok: false, reason: "not_found" });
+    expect(await editComment(other, created.data.id, "Hijack")).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
     expect(await deleteComment(other, created.data.id)).toEqual({
       ok: false,
       reason: "not_found",
@@ -241,7 +279,7 @@ describe("comments", () => {
       author,
       "update",
       updateId,
-      "<p>Delete me</p>",
+      "Delete me"
     );
     expect(created.ok).toBe(true);
     if (!created.ok) return;
@@ -257,9 +295,10 @@ describe("comments", () => {
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
 
-    expect(
-      await createComment(author, "update", updateId, "<p></p>"),
-    ).toEqual({ ok: false, reason: "empty_content" });
+    expect(await createComment(author, "update", updateId, "   \n  ")).toEqual({
+      ok: false,
+      reason: "empty_content",
+    });
   });
 });
 
@@ -303,17 +342,17 @@ describe("reactions", () => {
     vi.useRealTimers();
   });
 
-  it("toggles a reaction on an update and reports who reacted", async () => {
+  it("toggles a like on an update and reports who reacted", async () => {
     const actor = await createUser("Reactor");
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
 
-    const added = await toggleReaction(actor, "update", updateId, "👍");
+    const added = await toggleReaction(actor, "update", updateId, "like");
     expect(added.ok).toBe(true);
     if (added.ok) {
       expect(added.data).toEqual([
         {
-          emoji: "👍",
+          kind: "like",
           count: 1,
           users: [{ id: actor.id, name: actor.name }],
           reactedByMe: true,
@@ -321,19 +360,41 @@ describe("reactions", () => {
       ]);
     }
 
-    const removed = await toggleReaction(actor, "update", updateId, "👍");
+    const removed = await toggleReaction(actor, "update", updateId, "like");
     expect(removed.ok).toBe(true);
     if (removed.ok) expect(removed.data).toEqual([]);
   });
 
-  it("keeps one row per user, target and emoji", async () => {
+  it("moves a like to a dislike instead of holding both", async () => {
+    const actor = await createUser("Switcher");
+    const owner = await createUser("Owner");
+    const updateId = await createTargetUpdate(owner);
+
+    await toggleReaction(actor, "update", updateId, "like");
+    const switched = await toggleReaction(actor, "update", updateId, "dislike");
+
+    expect(switched.ok).toBe(true);
+    if (switched.ok) {
+      expect(switched.data).toHaveLength(1);
+      expect(switched.data[0]?.kind).toBe("dislike");
+      expect(switched.data[0]?.reactedByMe).toBe(true);
+    }
+
+    const rows = await prisma.reaction.findMany({
+      where: { targetId: updateId, userId: actor.id },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe("dislike");
+  });
+
+  it("keeps one row per person and counts everyone who liked", async () => {
     const first = await createUser("First");
     const second = await createUser("Second");
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
 
-    await toggleReaction(first, "update", updateId, "✅");
-    await toggleReaction(second, "update", updateId, "✅");
+    await toggleReaction(first, "update", updateId, "like");
+    await toggleReaction(second, "update", updateId, "like");
 
     const summary = await getReactionSummary("update", updateId, first.id);
     expect(summary).toHaveLength(1);
@@ -344,19 +405,19 @@ describe("reactions", () => {
     expect(rows).toBe(2);
   });
 
-  it("rejects unsupported emojis and missing targets", async () => {
+  it("rejects unsupported reactions and missing targets", async () => {
     const actor = await createUser("Reactor");
 
     expect(
-      await toggleReaction(actor, "update", crypto.randomUUID(), "👍"),
+      await toggleReaction(actor, "update", crypto.randomUUID(), "like")
     ).toEqual({ ok: false, reason: "not_found" });
 
     const owner = await createUser("Owner");
     const updateId = await createTargetUpdate(owner);
 
-    expect(await toggleReaction(actor, "update", updateId, "🚀")).toEqual({
+    expect(await toggleReaction(actor, "update", updateId, "love")).toEqual({
       ok: false,
-      reason: "invalid_emoji",
+      reason: "invalid_reaction",
     });
   });
 
@@ -368,7 +429,7 @@ describe("reactions", () => {
       actor,
       "update",
       updateId,
-      "<p>React to me</p>",
+      "React to me"
     );
     expect(comment.ok).toBe(true);
     if (!comment.ok) return;
@@ -377,16 +438,16 @@ describe("reactions", () => {
       actor,
       "comment",
       comment.data.id,
-      "🎉",
+      "dislike"
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data[0]?.emoji).toBe("🎉");
+      expect(result.data[0]?.kind).toBe("dislike");
       expect(result.data[0]?.count).toBe(1);
     }
 
     const comments = await listComments(owner.id, "update", updateId);
-    expect(comments[0]?.reactions[0]?.emoji).toBe("🎉");
+    expect(comments[0]?.reactions[0]?.kind).toBe("dislike");
     expect(comments[0]?.reactions[0]?.reactedByMe).toBe(false);
   });
 });

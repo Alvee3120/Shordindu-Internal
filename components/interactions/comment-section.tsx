@@ -5,17 +5,18 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserCard } from "@/components/ui/user-card";
-import { RichTextContent } from "@/components/editor/rich-text-content";
-import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { CommentInput } from "@/components/interactions/comment-input";
+import { CommentText } from "@/components/interactions/comment-text";
 import { ReactionBar } from "@/components/interactions/reaction-bar";
 import { callApi, callApiJson, fetchJson } from "@/components/api-client";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { useToast } from "@/components/ui/toast";
 import { formatDhakaDate, formatDhakaTime } from "@/lib/time";
+import { stripMentionTokens } from "@/lib/mentions";
 import type { CommentDto } from "@/components/interactions/types";
 
-function hasText(html: string): boolean {
-  return html.replace(/<[^>]*>/g, "").trim().length > 0;
+function hasText(value: string): boolean {
+  return value.trim().length > 0;
 }
 
 export function CommentSection({
@@ -43,9 +44,7 @@ export function CommentSection({
     const result = await fetchJson<{
       comments: CommentDto[];
       commentCount: number;
-    }>(
-      `/api/comments?targetType=${targetType}&targetId=${targetId}`,
-    );
+    }>(`/api/comments?targetType=${targetType}&targetId=${targetId}`);
     setLoading(false);
 
     if (!result.ok || !result.data) {
@@ -73,7 +72,7 @@ export function CommentSection({
         position: user.position,
         department: user.department,
       },
-      contentHtml: draft,
+      content: draft,
       createdAt: new Date().toISOString(),
       editedAt: null,
       canEdit: true,
@@ -88,23 +87,28 @@ export function CommentSection({
     const result = await callApiJson<{ comment: CommentDto }>(
       "/api/comments",
       "POST",
-      { targetType, targetId, contentHtml: draft },
+      { targetType, targetId, content: draft }
     );
 
     setSubmitting(false);
 
     if (!result.ok || !result.data) {
       setComments((previous) =>
-        previous.filter((comment) => comment.id !== tempId),
+        previous.filter((comment) => comment.id !== tempId)
       );
       toast.show(result.error ?? "Could not add the comment.", "error");
       return;
     }
 
     const saved = result.data.comment;
-    setComments((previous) =>
-      previous.map((comment) => (comment.id === tempId ? saved : comment)),
-    );
+    setComments((previous) => {
+      const next = previous.map((comment) =>
+        comment.id === tempId ? saved : comment
+      );
+      onCountChange(next.length);
+      return next;
+    });
+    toast.show("Comment added.", "success");
   }
 
   async function saveEdit(commentId: string) {
@@ -115,7 +119,7 @@ export function CommentSection({
     const result = await callApiJson<{ comment: CommentDto }>(
       `/api/comments/${commentId}`,
       "PATCH",
-      { contentHtml: editDraft },
+      { content: editDraft }
     );
     setBusyId(null);
 
@@ -126,9 +130,7 @@ export function CommentSection({
 
     const saved = result.data.comment;
     setComments((previous) =>
-      previous.map((comment) =>
-        comment.id === commentId ? saved : comment,
-      ),
+      previous.map((comment) => (comment.id === commentId ? saved : comment))
     );
     setEditingId(null);
     setEditDraft("");
@@ -181,7 +183,7 @@ export function CommentSection({
         {comments.map((comment) => (
           <div
             key={comment.id}
-            className={`space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800 ${
+            className={`space-y-2 border-t border-border pt-3 ${
               comment.id.startsWith("temp-") ? "opacity-70" : ""
             }`}
           >
@@ -198,13 +200,11 @@ export function CommentSection({
               </span>
             </div>
 
-            {comment.editedAt ? (
-              <Badge variant="edited">Edited</Badge>
-            ) : null}
+            {comment.editedAt ? <Badge variant="edited">Edited</Badge> : null}
 
             {editingId === comment.id ? (
               <div className="space-y-2">
-                <RichTextEditor
+                <CommentInput
                   value={editDraft}
                   onChange={setEditDraft}
                   placeholder="Edit your comment"
@@ -231,7 +231,7 @@ export function CommentSection({
                 </div>
               </div>
             ) : (
-              <RichTextContent html={comment.contentHtml} />
+              <CommentText content={comment.content} />
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -249,7 +249,7 @@ export function CommentSection({
                     className="h-8 px-2 text-xs"
                     onClick={() => {
                       setEditingId(comment.id);
-                      setEditDraft(comment.contentHtml);
+                      setEditDraft(stripMentionTokens(comment.content));
                     }}
                     disabled={busyId === comment.id}
                   >
@@ -273,8 +273,8 @@ export function CommentSection({
         ))}
       </div>
 
-      <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800">
-        <RichTextEditor
+      <div className="space-y-2 border-t border-border pt-3">
+        <CommentInput
           value={draft}
           onChange={setDraft}
           placeholder="Write a comment, type @ to mention someone"

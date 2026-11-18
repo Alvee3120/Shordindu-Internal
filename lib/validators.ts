@@ -73,7 +73,7 @@ export const updateUserSchema = z
       value.role !== undefined ||
       value.department !== undefined ||
       value.status !== undefined,
-    { message: "Nothing to update" },
+    { message: "Nothing to update" }
   );
 
 export type RequestRegisterInput = z.infer<typeof requestRegisterSchema>;
@@ -92,7 +92,7 @@ export const updateDateSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date")
   .refine(
     (value) => !Number.isNaN(new Date(`${value}T00:00:00.000Z`).getTime()),
-    "Choose a valid date",
+    "Choose a valid date"
   );
 
 export const createUpdateSchema = z.object({
@@ -140,15 +140,17 @@ export const commentTargetSchema = z.object({
 });
 
 export const createCommentSchema = commentTargetSchema.extend({
-  contentHtml: z
+  content: z
     .string()
+    .trim()
     .min(1, "Write something before saving")
     .max(20_000, "This comment is too long"),
 });
 
 export const editCommentSchema = z.object({
-  contentHtml: z
+  content: z
     .string()
+    .trim()
     .min(1, "Write something before saving")
     .max(20_000, "This comment is too long"),
 });
@@ -156,7 +158,7 @@ export const editCommentSchema = z.object({
 export const reactionSchema = z.object({
   targetType: targetTypeSchema,
   targetId: z.string().uuid("Choose a valid item"),
-  emoji: z.string().min(1).max(8),
+  kind: z.enum(["like", "dislike"]),
 });
 
 export const reactionQuerySchema = z.object({
@@ -190,7 +192,7 @@ export const createAssignmentSchema = z
     {
       message: "Choose at least one assignee or a department",
       path: ["assigneeIds"],
-    },
+    }
   );
 
 export const updateAssignmentSchema = z
@@ -212,12 +214,16 @@ export const updateAssignmentSchema = z
       value.priority !== undefined ||
       (value.addAssigneeIds && value.addAssigneeIds.length > 0) ||
       (value.removeAssigneeIds && value.removeAssigneeIds.length > 0),
-    { message: "Nothing to update" },
+    { message: "Nothing to update" }
   );
 
 export const updateAssigneeStatusSchema = z.object({
   status: assigneeStatusSchema,
-  note: z.string().trim().max(500, "Keep the note under 500 characters").optional(),
+  note: z
+    .string()
+    .trim()
+    .max(500, "Keep the note under 500 characters")
+    .optional(),
 });
 
 export const assignmentListQuerySchema = z.object({
@@ -284,14 +290,12 @@ export const departmentsSettingSchema = z.object({
       (departments) =>
         new Set(departments.map((name) => name.toLowerCase())).size ===
         departments.length,
-      { message: "Department names must be unique" },
+      { message: "Department names must be unique" }
     ),
 });
 
 export const reminderTimeSchema = z.object({
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24-hour)"),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24-hour)"),
 });
 
 /** Flattens a Zod error into `{ field: firstMessage }` for form display. */

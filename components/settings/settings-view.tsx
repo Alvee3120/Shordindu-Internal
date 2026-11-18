@@ -37,13 +37,13 @@ export function SettingsView({
 
   function updateDepartment(index: number, value: string) {
     setDepartments((previous) =>
-      previous.map((name, position) => (position === index ? value : name)),
+      previous.map((name, position) => (position === index ? value : name))
     );
   }
 
   function removeDepartment(index: number) {
     setDepartments((previous) =>
-      previous.filter((_, position) => position !== index),
+      previous.filter((_, position) => position !== index)
     );
   }
 
@@ -64,7 +64,7 @@ export function SettingsView({
     const result = await callApiJson<{ departments: string[] }>(
       "/api/settings/departments",
       "PATCH",
-      { departments: cleaned },
+      { departments: cleaned }
     );
     setSavingDepartments(false);
 
@@ -81,7 +81,7 @@ export function SettingsView({
     setWeekendDays((previous) =>
       previous.includes(day)
         ? previous.filter((value) => value !== day)
-        : [...previous, day].sort((a, b) => a - b),
+        : [...previous, day].sort((a, b) => a - b)
     );
   }
 
@@ -90,7 +90,7 @@ export function SettingsView({
     const result = await callApiJson<{ days: number[] }>(
       "/api/settings/weekend",
       "PATCH",
-      { days: weekendDays },
+      { days: weekendDays }
     );
     setSavingWeekend(false);
 
@@ -107,7 +107,7 @@ export function SettingsView({
     const result = await callApiJson<{ time: string }>(
       "/api/settings/reminder",
       "PATCH",
-      { time: reminderTime },
+      { time: reminderTime }
     );
     setSavingReminder(false);
 

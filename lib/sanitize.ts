@@ -73,7 +73,7 @@ export function sanitizeRichText(dirtyHtml: string): string {
 export function extractPlainText(html: string): string {
   const withoutNonTextContent = html.replace(
     new RegExp(`<(${NON_TEXT_TAGS.join("|")})\\b[\\s\\S]*?</\\1>`, "gi"),
-    " ",
+    " "
   );
 
   const withoutTags = withoutNonTextContent
@@ -82,4 +82,20 @@ export function extractPlainText(html: string): string {
     .replace(/<[^>]*>/g, "");
 
   return decodeHtmlEntities(withoutTags).replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Cleans plain-text comments. Comments are not rich text, so any markup a
+ * client sends is treated as literal characters and stripped of control
+ * codes; the UI escapes it on render.
+ */
+export function sanitizeCommentText(text: string): string {
+  return (
+    text
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+      .replace(/\r\n?/g, "\n")
+      .trim()
+      .slice(0, 20_000)
+  );
 }

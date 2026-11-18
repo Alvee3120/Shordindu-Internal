@@ -8,10 +8,7 @@ export default async function LoginPage() {
   if (user) redirect("/");
 
   return (
-    <AuthCard
-      title="Sign in"
-      subtitle="Enter your work email and password."
-    >
+    <AuthCard title="Sign in" subtitle="Enter your work email and password.">
       <LoginForm />
     </AuthCard>
   );

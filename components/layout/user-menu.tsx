@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import type { SessionUser } from "@/lib/auth";
 
 export function UserMenu({ user }: { user: SessionUser }) {
@@ -54,9 +53,9 @@ export function UserMenu({ user }: { user: SessionUser }) {
           />
           <div
             role="menu"
-            className="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+            className="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-border bg-card p-3 shadow-lg"
           >
-            <div className="space-y-0.5 border-b border-slate-200 pb-3 dark:border-slate-800">
+            <div className="space-y-0.5 border-b border-border pb-3">
               <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {user.email}
@@ -66,17 +65,12 @@ export function UserMenu({ user }: { user: SessionUser }) {
               </p>
             </div>
 
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm">Theme</span>
-              <ThemeToggle />
-            </div>
-
             <button
               type="button"
               role="menuitem"
               onClick={() => void signOut()}
               disabled={pending}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
+              className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />
               {pending ? "Signing out..." : "Sign out"}

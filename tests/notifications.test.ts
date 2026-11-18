@@ -17,7 +17,7 @@ const createdAssignmentIds: string[] = [];
 
 async function createUser(
   name: string,
-  status: UserStatus = UserStatus.Active,
+  status: UserStatus = UserStatus.Active
 ): Promise<SessionUser> {
   const user = await prisma.user.create({
     data: {
@@ -126,7 +126,7 @@ describe("notification creation", () => {
       actor,
       targetType: "update",
       targetId: updateId,
-      contentHtml: `<p><span data-mention="${mentioned.id}">@Mentioned</span></p>`,
+      content: `@[Mentioned](${mentioned.id})`,
     });
 
     const ownerRows = await prisma.notification.findMany({
@@ -151,7 +151,7 @@ describe("notification creation", () => {
       actor: owner,
       targetType: "update",
       targetId: updateId,
-      contentHtml: "<p>Talking to myself</p>",
+      content: "Talking to myself",
     });
 
     const rows = await prisma.notification.findMany({
@@ -180,14 +180,14 @@ describe("notification creation", () => {
       actor,
       targetType: "assignment",
       targetId: assignment.id,
-      contentHtml: "<p>Any update?</p>",
+      content: "Any update?",
     });
 
     expect(
-      await prisma.notification.count({ where: { userId: creator.id } }),
+      await prisma.notification.count({ where: { userId: creator.id } })
     ).toBe(1);
     expect(
-      await prisma.notification.count({ where: { userId: assignee.id } }),
+      await prisma.notification.count({ where: { userId: assignee.id } })
     ).toBe(1);
   });
 
@@ -222,13 +222,13 @@ describe("notification creation", () => {
     });
 
     expect(
-      await prisma.notification.count({ where: { userId: first.id } }),
+      await prisma.notification.count({ where: { userId: first.id } })
     ).toBe(1);
     expect(
-      await prisma.notification.count({ where: { userId: second.id } }),
+      await prisma.notification.count({ where: { userId: second.id } })
     ).toBe(1);
     expect(
-      await prisma.notification.count({ where: { userId: actor.id } }),
+      await prisma.notification.count({ where: { userId: actor.id } })
     ).toBe(0);
   });
 });
@@ -266,7 +266,7 @@ describe("notification digest", () => {
       async (payload) => {
         sent.push(payload);
       },
-      { userIds: [user.id, disabled.id] },
+      { userIds: [user.id, disabled.id] }
     );
 
     expect(result).toEqual({ emails: 1, notifications: 3 });
@@ -286,7 +286,7 @@ describe("notification digest", () => {
       async () => {
         throw new Error("should not send again");
       },
-      { userIds: [user.id, disabled.id] },
+      { userIds: [user.id, disabled.id] }
     );
     expect(secondRun).toEqual({ emails: 0, notifications: 0 });
   });

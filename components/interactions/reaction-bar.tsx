@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { REACTION_EMOJIS } from "@/lib/reaction-emojis";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { callApiJson } from "@/components/api-client";
 import { useSessionUser } from "@/components/providers/session-provider";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { ReactionSummaryDto } from "@/components/interactions/types";
+import type {
+  ReactionKindDto,
+  ReactionSummaryDto,
+} from "@/components/interactions/types";
+
+const OPTIONS: {
+  kind: ReactionKindDto;
+  label: string;
+  icon: typeof ThumbsUp;
+}[] = [
+  { kind: "like", label: "Like", icon: ThumbsUp },
+  { kind: "dislike", label: "Dislike", icon: ThumbsDown },
+];
 
 export function ReactionBar({
   targetType,
@@ -23,50 +35,66 @@ export function ReactionBar({
   const toast = useToast();
   const [reactions, setReactions] =
     useState<ReactionSummaryDto[]>(initialReactions);
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<ReactionKindDto | null>(null);
 
   useEffect(() => {
     setReactions(initialReactions);
   }, [initialReactions]);
 
-  function optimistic(emoji: string): ReactionSummaryDto[] {
-    const map = new Map(reactions.map((item) => [item.emoji, item]));
-    const existing = map.get(emoji);
-    const users = existing?.users ?? [];
-    const hasReacted = users.some((entry) => entry.id === user.id);
-    const nextUsers = hasReacted
-      ? users.filter((entry) => entry.id !== user.id)
-      : [...users, { id: user.id, name: user.name }];
+  const myReaction = reactions.find((item) => item.reactedByMe)?.kind ?? null;
 
-    if (nextUsers.length === 0) {
-      map.delete(emoji);
+  /**
+   * Mirrors the server rule: picking the reaction you already have clears it,
+   * picking the other one moves it, so only one can ever be active.
+   */
+  function optimistic(kind: ReactionKindDto): ReactionSummaryDto[] {
+    const next = reactions.map((item) => {
+      const users = item.users.filter((entry) => entry.id !== user.id);
+      return {
+        ...item,
+        users,
+        count: users.length,
+        reactedByMe: false,
+      };
+    });
+
+    if (myReaction === kind) {
+      return next.filter((item) => item.count > 0);
+    }
+
+    const target = next.find((item) => item.kind === kind);
+    if (target) {
+      target.users = [...target.users, { id: user.id, name: user.name }];
+      target.count = target.users.length;
+      target.reactedByMe = true;
     } else {
-      map.set(emoji, {
-        emoji,
-        count: nextUsers.length,
-        users: nextUsers,
-        reactedByMe: !hasReacted,
+      next.push({
+        kind,
+        count: 1,
+        users: [{ id: user.id, name: user.name }],
+        reactedByMe: true,
       });
     }
 
-    return REACTION_EMOJIS.map((item) => map.get(item)).filter(
-      (item): item is ReactionSummaryDto => Boolean(item),
+    return next.sort(
+      (a, b) => (a.kind === "like" ? -1 : 1) - (b.kind === "like" ? -1 : 1)
     );
   }
 
-  async function toggle(emoji: string) {
+  async function choose(kind: ReactionKindDto) {
     if (pending) return;
 
     const previous = reactions;
-    setPending(emoji);
-    setReactions(optimistic(emoji));
-
-    const result = await callApiJson<{ reactions: ReactionSummaryDto[] }>(
+    const detail = callApiJson<{ reactions: ReactionSummaryDto[] }>(
       "/api/reactions",
       "POST",
-      { targetType, targetId, emoji },
+      { targetType, targetId, kind }
     );
 
+    setPending(kind);
+    setReactions(optimistic(kind));
+
+    const result = await detail;
     setPending(null);
 
     if (!result.ok || !result.data) {
@@ -79,33 +107,35 @@ export function ReactionBar({
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-1", className)}>
-      {REACTION_EMOJIS.map((emoji) => {
-        const summary = reactions.find((item) => item.emoji === emoji);
+    <div className={cn("flex flex-wrap items-center gap-1.5", className)}>
+      {OPTIONS.map(({ kind, label, icon: Icon }) => {
+        const summary = reactions.find((item) => item.kind === kind);
         const count = summary?.count ?? 0;
-        const mine = summary?.reactedByMe ?? false;
+        const mine = myReaction === kind;
         const names = summary?.users.map((entry) => entry.name) ?? [];
+        const tooltip = names.length > 0 ? names.join(", ") : `${label} this`;
 
         return (
           <button
-            key={emoji}
+            key={kind}
             type="button"
-            onClick={() => void toggle(emoji)}
+            onClick={() => void choose(kind)}
             aria-pressed={mine}
-            aria-label={`React with ${emoji}`}
-            title={names.length > 0 ? names.join(", ") : `React with ${emoji}`}
+            aria-label={label}
+            title={tooltip}
             className={cn(
-              "inline-flex h-8 items-center gap-1 rounded-full border px-2 text-sm transition",
+              "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition",
               mine
-                ? "border-primary/40 bg-primary/10"
-                : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800",
-              pending === emoji && "opacity-60",
+                ? kind === "like"
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-border bg-card text-muted-foreground hover:border-input hover:bg-muted hover:text-foreground",
+              pending === kind && "opacity-60"
             )}
           >
-            <span>{emoji}</span>
-            {count > 0 ? (
-              <span className="text-xs text-muted-foreground">{count}</span>
-            ) : null}
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+            {count > 0 ? <span>{count}</span> : null}
           </button>
         );
       })}

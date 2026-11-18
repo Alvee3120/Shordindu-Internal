@@ -6,20 +6,40 @@ export function UserCard({
   position,
   department,
   size = "md",
+  tone = "default",
   className,
 }: {
   name: string;
   position: string;
   department: string;
   size?: "sm" | "md" | "lg";
+  tone?: "default" | "light";
   className?: string;
 }) {
+  const onDark = tone === "light";
+
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      <Avatar name={name} size={size} />
+      <Avatar
+        name={name}
+        size={size}
+        className={onDark ? "bg-white/15 text-sidebar-foreground" : undefined}
+      />
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{name}</p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p
+          className={cn(
+            "truncate text-sm font-medium",
+            onDark && "text-sidebar-foreground"
+          )}
+        >
+          {name}
+        </p>
+        <p
+          className={cn(
+            "truncate text-xs",
+            onDark ? "text-sidebar-muted" : "text-muted-foreground"
+          )}
+        >
           {position} &middot; {department}
         </p>
       </div>

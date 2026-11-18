@@ -55,7 +55,7 @@ export function AddUserForm({
 
   return (
     <form
-      className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm"
       onSubmit={submit}
     >
       <div className="grid gap-3 sm:grid-cols-2">
