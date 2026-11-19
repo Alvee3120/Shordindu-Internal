@@ -11,14 +11,20 @@ import { extractPlainText } from "@/lib/sanitize";
 import {
   appUrl,
   buildAssignmentDueEmail,
+  buildCalendarReminderEmail,
   buildDailyReminderEmail,
   type EmailPayload,
 } from "@/lib/email";
+import {
+  dueCalendarEvents,
+  markCalendarReminded,
+} from "@/lib/calendar";
 
 export type ReminderSender = (payload: EmailPayload) => Promise<unknown>;
 
 export const DAILY_REMINDER_JOB = "daily-update-reminder";
 export const ASSIGNMENT_DUE_JOB = "assignment-due-reminder";
+export const CALENDAR_REMINDER_JOB = "calendar-reminder";
 
 export interface ReminderRecipient {
   id: string;
@@ -222,6 +228,53 @@ export async function runAssignmentDueReminder(
     };
   } catch (error) {
     await finishRun(ASSIGNMENT_DUE_JOB, runDate, "failed", 0);
+    throw error;
+  }
+}
+
+/**
+ * Emails each user whose own calendar entry falls today and has not been
+ * reminded yet. Idempotent at two levels: the per-day job run and the
+ * per-entry `remindedAt` marker, so a retry never double-sends.
+ */
+export async function runCalendarReminder(
+  send: ReminderSender,
+): Promise<ReminderResult> {
+  const today = dhakaToday();
+  const runDate = parseDateOnly(today);
+
+  if (!(await claimRun(CALENDAR_REMINDER_JOB, runDate))) {
+    return { status: "already_ran", recipients: [], emailCount: 0 };
+  }
+
+  try {
+    const events = await dueCalendarEvents(today);
+    const recipients = new Map<string, ReminderRecipient>();
+    const link = `${appUrl()}/calendar`;
+
+    for (const event of events) {
+      await send(
+        buildCalendarReminderEmail({
+          to: event.user.email,
+          name: event.user.name,
+          title: event.title,
+          notes: event.notes,
+          link,
+        }),
+      );
+      recipients.set(event.user.id, event.user);
+    }
+
+    await markCalendarReminded(events.map((event) => event.id));
+    await finishRun(CALENDAR_REMINDER_JOB, runDate, "completed", events.length);
+
+    return {
+      status: "completed",
+      recipients: Array.from(recipients.values()),
+      emailCount: events.length,
+    };
+  } catch (error) {
+    await finishRun(CALENDAR_REMINDER_JOB, runDate, "failed", 0);
     throw error;
   }
 }

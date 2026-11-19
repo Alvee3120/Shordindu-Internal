@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isApiResponse, requireUserApi } from "@/lib/api";
 import { readJsonBody } from "@/lib/http";
-import { leaveSchema } from "@/lib/validators";
-import { canMarkLeaveForOthers } from "@/lib/permissions";
-import { leaveError, listLeaves, markLeave } from "@/lib/leaves";
+import { formatFieldErrors, leaveSchema } from "@/lib/validators";
+import { canApproveLeave, canMarkLeaveForOthers } from "@/lib/permissions";
+import { applyForLeave, leaveError, listLeaves } from "@/lib/leaves";
 
 export async function GET() {
   const user = await requireUserApi();
@@ -13,6 +13,7 @@ export async function GET() {
   return NextResponse.json({
     leaves,
     canMarkForOthers: canMarkLeaveForOthers(user.role),
+    canApprove: canApproveLeave(user.role),
   });
 }
 
@@ -23,19 +24,28 @@ export async function POST(request: NextRequest) {
   const parsed = leaveSchema.safeParse(await readJsonBody(request));
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Check the dates." },
+      {
+        error: parsed.error.issues[0]?.message ?? "Check the request.",
+        fieldErrors: formatFieldErrors(parsed.error),
+      },
       { status: 400 },
     );
   }
 
-  const result = await markLeave(user, parsed.data);
+  const result = await applyForLeave(user, parsed.data);
   if (!result.ok) {
     const { status, message } = leaveError(result.reason);
     return NextResponse.json({ error: message }, { status });
   }
 
   return NextResponse.json(
-    { leave: result.leave, message: "Leave marked." },
+    {
+      leave: result.leave,
+      message:
+        result.leave.status === "Approved"
+          ? "Leave marked and approved."
+          : "Leave request sent for approval.",
+    },
     { status: 201 },
   );
 }

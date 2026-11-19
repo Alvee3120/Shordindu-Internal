@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { Role, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth";
-import { markLeave, listLeaves } from "@/lib/leaves";
+import { applyForLeave, decideLeave, listLeaves } from "@/lib/leaves";
 import {
   createHoliday,
   deleteHoliday,
@@ -47,6 +47,7 @@ async function createUser(
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 
@@ -66,6 +67,9 @@ async function addUpdate(userId: string, deleted = false): Promise<void> {
 }
 
 afterAll(async () => {
+  await prisma.notification.deleteMany({
+    where: { userId: { in: createdUserIds } },
+  });
   await prisma.auditLog.deleteMany({
     where: {
       OR: [
@@ -80,7 +84,7 @@ afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
 });
 
-describe("leave marking", () => {
+describe("leave requests", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(start);
@@ -89,55 +93,65 @@ describe("leave marking", () => {
     vi.useRealTimers();
   });
 
-  it("lets a user mark their own leave", async () => {
+  it("lets a user apply with a reason, starting as pending", async () => {
     const user = await createUser("Self Leave");
 
-    const result = await markLeave(user, {
+    const result = await applyForLeave(user, {
       fromDate: "2026-11-17",
       toDate: "2026-11-18",
+      reason: "Down with fever",
     });
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      createdLeaveIds.push(result.leave.id);
-      expect(result.leave.userId).toBe(user.id);
-    }
+    if (!result.ok) return;
+    createdLeaveIds.push(result.leave.id);
 
+    expect(result.leave.userId).toBe(user.id);
+    expect(result.leave.reason).toBe("Down with fever");
+    expect(result.leave.status).toBe("Pending");
+    expect(result.leave.decidedBy).toBeNull();
+
+    // A pending request must not mark the person as away yet.
     const todayLeave = await getOnLeaveUserIds("2026-11-17");
-    const yesterdayLeave = await getOnLeaveUserIds("2026-11-16");
-    expect(todayLeave.has(user.id)).toBe(true);
-    expect(yesterdayLeave.has(user.id)).toBe(false);
+    expect(todayLeave.has(user.id)).toBe(false);
   });
 
-  it("blocks Employees from marking leave for someone else", async () => {
+  it("blocks Employees from applying for someone else", async () => {
     const employee = await createUser("Employee");
     const other = await createUser("Other");
 
     expect(
-      await markLeave(employee, {
+      await applyForLeave(employee, {
         userId: other.id,
         fromDate: "2026-11-17",
         toDate: "2026-11-17",
+        reason: "Not mine",
       }),
     ).toEqual({ ok: false, reason: "forbidden" });
   });
 
-  it("lets Manager, HR and Admin mark leave for others", async () => {
+  it("lets Manager, HR and Admin mark leave for others as approved straight away", async () => {
     const manager = await createUser("Manager", Role.Manager);
     const target = await createUser("Target");
 
-    const result = await markLeave(manager, {
+    const result = await applyForLeave(manager, {
       userId: target.id,
       fromDate: "2026-11-17",
       toDate: "2026-11-17",
+      reason: "Personal matters",
     });
 
     expect(result.ok).toBe(true);
-    if (result.ok) {
-      createdLeaveIds.push(result.leave.id);
-      expect(result.leave.createdBy.id).toBe(manager.id);
-      expect(result.leave.userId).toBe(target.id);
-    }
+    if (!result.ok) return;
+    createdLeaveIds.push(result.leave.id);
+
+    // The approver marking it is the decision itself.
+    expect(result.leave.status).toBe("Approved");
+    expect(result.leave.decidedBy?.id).toBe(manager.id);
+    expect(result.leave.userId).toBe(target.id);
+
+    const onLeave = await getOnLeaveUserIds("2026-11-17");
+    expect(onLeave.has(target.id)).toBe(true);
   });
 
   it("rejects an inverted range and inactive users", async () => {
@@ -149,17 +163,19 @@ describe("leave marking", () => {
     );
 
     expect(
-      await markLeave(manager, {
+      await applyForLeave(manager, {
         fromDate: "2026-11-18",
         toDate: "2026-11-17",
+        reason: "Backwards",
       }),
     ).toEqual({ ok: false, reason: "invalid_range" });
 
     expect(
-      await markLeave(manager, {
+      await applyForLeave(manager, {
         userId: disabled.id,
         fromDate: "2026-11-17",
         toDate: "2026-11-17",
+        reason: "Disabled user",
       }),
     ).toEqual({ ok: false, reason: "invalid_user" });
   });
@@ -169,14 +185,16 @@ describe("leave marking", () => {
     const manager = await createUser("Manager", Role.Manager);
     const target = await createUser("Target");
 
-    const first = await markLeave(employee, {
+    const first = await applyForLeave(employee, {
       fromDate: "2026-11-17",
       toDate: "2026-11-17",
+      reason: "Own leave",
     });
-    const second = await markLeave(manager, {
+    const second = await applyForLeave(manager, {
       userId: target.id,
       fromDate: "2026-11-17",
       toDate: "2026-11-18",
+      reason: "Marked for someone",
     });
     if (first.ok) createdLeaveIds.push(first.leave.id);
     if (second.ok) createdLeaveIds.push(second.leave.id);
@@ -190,6 +208,121 @@ describe("leave marking", () => {
     const ids = managerView.map((leave) => leave.userId);
     expect(ids).toContain(employee.id);
     expect(ids).toContain(target.id);
+  });
+});
+
+describe("leave approval", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(start);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function pendingRequest(user: SessionUser): Promise<string> {
+    const result = await applyForLeave(user, {
+      fromDate: "2026-11-17",
+      toDate: "2026-11-17",
+      reason: "Family event",
+    });
+    if (!result.ok) throw new Error("request failed");
+    createdLeaveIds.push(result.leave.id);
+    return result.leave.id;
+  }
+
+  it("records who approved and marks the person on leave that day", async () => {
+    const employee = await createUser("Employee");
+    const manager = await createUser("Rifat", Role.Manager);
+    const leaveId = await pendingRequest(employee);
+
+    const result = await decideLeave(manager, leaveId, "approve");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.leave.status).toBe("Approved");
+    expect(result.leave.decidedBy?.name).toBe("Rifat");
+    expect(result.leave.decidedAt).not.toBeNull();
+
+    // Approved leave now counts as away.
+    const onLeave = await getOnLeaveUserIds("2026-11-17");
+    expect(onLeave.has(employee.id)).toBe(true);
+  });
+
+  it("records a rejection and keeps the person off the leave list", async () => {
+    const employee = await createUser("Employee");
+    const hr = await createUser("HR Person", Role.HR);
+    const leaveId = await pendingRequest(employee);
+
+    const result = await decideLeave(hr, leaveId, "reject");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.leave.status).toBe("Rejected");
+    expect(result.leave.decidedBy?.name).toBe("HR Person");
+
+    const onLeave = await getOnLeaveUserIds("2026-11-17");
+    expect(onLeave.has(employee.id)).toBe(false);
+  });
+
+  it("stops an approver from deciding their own request", async () => {
+    const admin = await createUser("Admin Person", Role.Admin);
+    const leaveId = await pendingRequest(admin);
+
+    expect(await decideLeave(admin, leaveId, "approve")).toEqual({
+      ok: false,
+      reason: "self_decision",
+    });
+  });
+
+  it("blocks Employees and refuses a second decision", async () => {
+    const employee = await createUser("Employee");
+    const manager = await createUser("Manager", Role.Manager);
+    const leaveId = await pendingRequest(employee);
+
+    expect(await decideLeave(employee, leaveId, "approve")).toEqual({
+      ok: false,
+      reason: "forbidden",
+    });
+
+    expect((await decideLeave(manager, leaveId, "approve")).ok).toBe(true);
+    expect(await decideLeave(manager, leaveId, "reject")).toEqual({
+      ok: false,
+      reason: "already_decided",
+    });
+  });
+
+  it("hides the decision buttons from the applicant and on decided rows", async () => {
+    const employee = await createUser("Employee");
+    const manager = await createUser("Manager", Role.Manager);
+    const leaveId = await pendingRequest(employee);
+
+    const forManager = await listLeaves(manager);
+    expect(forManager.find((leave) => leave.id === leaveId)?.canDecide).toBe(
+      true,
+    );
+
+    const forEmployee = await listLeaves(employee);
+    expect(forEmployee.find((leave) => leave.id === leaveId)?.canDecide).toBe(
+      false,
+    );
+
+    await decideLeave(manager, leaveId, "approve");
+    const after = await listLeaves(manager);
+    expect(after.find((leave) => leave.id === leaveId)?.canDecide).toBe(false);
+  });
+
+  it("notifies the applicant when the decision is made", async () => {
+    const employee = await createUser("Employee");
+    const manager = await createUser("Manager", Role.Manager);
+    const leaveId = await pendingRequest(employee);
+
+    await decideLeave(manager, leaveId, "approve");
+
+    const notification = await prisma.notification.findFirst({
+      where: { userId: employee.id, type: "leave_decision" },
+    });
+    expect(notification?.message).toContain("approved your leave");
   });
 });
 
@@ -287,11 +420,18 @@ describe("not submitted today", () => {
 
     await addUpdate(posted.id);
     await addUpdate(deleted.id, true);
-    const leave = await markLeave(onLeave, {
+    const leave = await applyForLeave(onLeave, {
       fromDate: "2026-11-17",
       toDate: "2026-11-17",
+      reason: "Approved time off",
     });
-    if (leave.ok) createdLeaveIds.push(leave.leave.id);
+    if (leave.ok) {
+      createdLeaveIds.push(leave.leave.id);
+      await prisma.leave.update({
+        where: { id: leave.leave.id },
+        data: { status: "Approved" },
+      });
+    }
 
     const summary = await getNotSubmittedToday();
     const ids = summary.missing.map((user) => user.id);
@@ -331,11 +471,19 @@ describe("not submitted today", () => {
 
   it("marks users on leave today in the users list", async () => {
     const user = await createUser("List On Leave");
-    const leave = await markLeave(user, {
+    const leave = await applyForLeave(user, {
       fromDate: "2026-11-17",
       toDate: "2026-11-17",
+      reason: "Medical appointment",
     });
-    if (leave.ok) createdLeaveIds.push(leave.leave.id);
+    if (leave.ok) {
+      createdLeaveIds.push(leave.leave.id);
+      // Only approved leave shows up as "on leave".
+      await prisma.leave.update({
+        where: { id: leave.leave.id },
+        data: { status: "Approved" },
+      });
+    }
 
     const users = await searchUsers(user.email);
     expect(users[0]?.onLeaveToday).toBe(true);

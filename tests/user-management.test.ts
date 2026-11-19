@@ -56,6 +56,7 @@ function asActor(user: User): SessionUser {
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 

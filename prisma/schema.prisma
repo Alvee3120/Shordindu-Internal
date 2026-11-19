@@ -30,6 +30,7 @@ enum TargetType {
   update
   comment
   assignment
+  chatMessage
 }
 
 enum ReactionKind {
@@ -54,6 +55,12 @@ enum AssigneeStatus {
   done
 }
 
+enum LeaveStatus {
+  Pending
+  Approved
+  Rejected
+}
+
 model User {
   id              String     @id @default(uuid())
   name            String
@@ -64,6 +71,7 @@ model User {
   role            Role?
   status          UserStatus @default(Pending)
   passwordHash    String?    @map("password_hash")
+  avatarFile      String?    @map("avatar_file")
   emailVerifiedAt DateTime?  @map("email_verified_at")
   createdAt       DateTime   @default(now()) @map("created_at")
 
@@ -72,10 +80,15 @@ model User {
   comments            Comment[]
   reactions           Reaction[]
   mentions            Mention[]
+  announcements       Announcement[]       @relation("AnnouncementCreatedBy")
+  chatMessages        ChatMessage[]
+  chatRead            ChatRead?
+  calendarEvents      CalendarEvent[]
   assignmentsCreated  Assignment[]         @relation("AssignmentCreatedBy")
   assignmentAssignees AssignmentAssignee[]
   leaves              Leave[]              @relation("LeaveUser")
   leavesCreated       Leave[]              @relation("LeaveCreatedBy")
+  leavesDecided       Leave[]              @relation("LeaveDecidedBy")
   notifications       Notification[]
   auditLogs           AuditLog[]
 
@@ -216,17 +229,79 @@ model AssignmentAssignee {
 }
 
 model Leave {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  user        User     @relation("LeaveUser", fields: [userId], references: [id])
-  fromDate    DateTime @map("from_date") @db.Date
-  toDate      DateTime @map("to_date") @db.Date
-  createdById String   @map("created_by")
-  createdBy   User     @relation("LeaveCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime @default(now()) @map("created_at")
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  user        User         @relation("LeaveUser", fields: [userId], references: [id])
+  fromDate    DateTime     @map("from_date") @db.Date
+  toDate      DateTime     @map("to_date") @db.Date
+  reason      String
+  status      LeaveStatus  @default(Pending)
+  decidedById String?      @map("decided_by")
+  decidedBy   User?        @relation("LeaveDecidedBy", fields: [decidedById], references: [id])
+  decidedAt   DateTime?    @map("decided_at")
+  createdById String       @map("created_by")
+  createdBy   User         @relation("LeaveCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now()) @map("created_at")
 
   @@index([userId, fromDate, toDate])
+  @@index([status])
   @@map("leaves")
+}
+
+model Announcement {
+  id          String    @id @default(uuid())
+  createdById String    @map("created_by")
+  createdBy   User      @relation("AnnouncementCreatedBy", fields: [createdById], references: [id])
+  title       String
+  contentHtml String    @map("content_html")
+  contentText String    @map("content_text")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  editedAt    DateTime? @map("edited_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@index([createdAt])
+  @@map("announcements")
+}
+
+model ChatMessage {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  editedAt  DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@map("chat_messages")
+}
+
+model CalendarEvent {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  notes      String?
+  eventDate  DateTime  @map("event_date") @db.Date
+  remindedAt DateTime? @map("reminded_at")
+  doneAt     DateTime? @map("done_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  editedAt   DateTime? @map("edited_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  @@index([userId, eventDate])
+  @@index([eventDate, remindedAt])
+  @@map("calendar_events")
+}
+
+model ChatRead {
+  userId     String   @id @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime @default(now()) @map("last_read_at")
+
+  @@map("chat_reads")
 }
 
 model Holiday {

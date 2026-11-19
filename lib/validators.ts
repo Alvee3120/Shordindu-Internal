@@ -170,6 +170,29 @@ export type CreateCommentInput = z.infer<typeof createCommentSchema>;
 export type EditCommentInput = z.infer<typeof editCommentSchema>;
 export type ReactionInput = z.infer<typeof reactionSchema>;
 
+export const sendChatMessageSchema = z.object({
+  content: z
+    .string()
+    .trim()
+    .min(1, "Write a message before sending")
+    .max(5_000, "Keep messages under 5000 characters"),
+});
+
+export const chatMessageListQuerySchema = z.object({
+  before: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+/** Poll cursor: everything that changed after this (updatedAt, id) pair. */
+export const chatChangesQuerySchema = z.object({
+  since: z.string().datetime(),
+  sinceId: z.string().uuid(),
+});
+
+export type SendChatMessageInput = z.infer<typeof sendChatMessageSchema>;
+export type ChatMessageListQuery = z.infer<typeof chatMessageListQuerySchema>;
+export type ChatChangesQuery = z.infer<typeof chatChangesQuerySchema>;
+
 export const assignmentPrioritySchema = z.enum(["normal", "urgent"]);
 
 export const assigneeStatusSchema = z.enum(["pending", "in_progress", "done"]);
@@ -247,16 +270,88 @@ export const leaveSchema = z
     userId: z.string().uuid().optional(),
     fromDate: updateDateSchema,
     toDate: updateDateSchema,
+    reason: z
+      .string()
+      .trim()
+      .min(3, "Explain the reason for the leave")
+      .max(1_000, "Keep the reason under 1000 characters"),
   })
   .refine((value) => value.fromDate <= value.toDate, {
     message: "The end date must be on or after the start date.",
     path: ["toDate"],
   });
 
+export const leaveDecisionSchema = z.object({
+  decision: z.enum(["approve", "reject"]),
+});
+
 export const holidaySchema = z.object({
   date: updateDateSchema,
   name: z.string().trim().min(2, "Enter a holiday name").max(100),
 });
+
+export const profileNameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Enter your full name")
+    .max(100, "Keep your name under 100 characters"),
+});
+
+export const calendarEventSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(2, "Enter a title")
+    .max(160, "Keep the title under 160 characters"),
+  // An empty notes box is sent as null, so accept null as well as a missing key.
+  notes: z
+    .string()
+    .trim()
+    .max(2_000, "Keep notes under 2000 characters")
+    .nullable()
+    .optional(),
+  date: updateDateSchema,
+});
+
+export const updateCalendarEventSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(2, "Enter a title")
+      .max(160, "Keep the title under 160 characters")
+      .optional(),
+    notes: z
+      .string()
+      .trim()
+      .max(2_000, "Keep notes under 2000 characters")
+      .nullable()
+      .optional(),
+    date: updateDateSchema.optional(),
+  })
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.notes !== undefined ||
+      value.date !== undefined,
+    { message: "Nothing to update" },
+  );
+
+export const calendarRangeSchema = z
+  .object({
+    from: updateDateSchema,
+    to: updateDateSchema,
+  })
+  .refine((value) => value.from <= value.to, {
+    message: "The range start must be on or before the end.",
+    path: ["to"],
+  });
+
+export type CalendarEventInput = z.infer<typeof calendarEventSchema>;
+export type UpdateCalendarEventInput = z.infer<
+  typeof updateCalendarEventSchema
+>;
 
 export const updateHolidaySchema = z
   .object({
@@ -280,6 +375,40 @@ export type LeaveInput = z.infer<typeof leaveSchema>;
 export type HolidayInput = z.infer<typeof holidaySchema>;
 export type UpdateHolidayInput = z.infer<typeof updateHolidaySchema>;
 export type WeekendInput = z.infer<typeof weekendSchema>;
+
+export const announcementSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(2, "Enter a title")
+    .max(160, "Keep the title under 160 characters"),
+  contentHtml: z
+    .string()
+    .min(1, "Write the announcement")
+    .max(20_000, "This announcement is too long"),
+});
+
+export const updateAnnouncementSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(2, "Enter a title")
+      .max(160, "Keep the title under 160 characters")
+      .optional(),
+    contentHtml: z
+      .string()
+      .min(1, "Write the announcement")
+      .max(20_000, "This announcement is too long")
+      .optional(),
+  })
+  .refine(
+    (value) => value.title !== undefined || value.contentHtml !== undefined,
+    { message: "Nothing to update" }
+  );
+
+export type AnnouncementInput = z.infer<typeof announcementSchema>;
+export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;
 
 export const departmentsSettingSchema = z.object({
   departments: z

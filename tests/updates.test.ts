@@ -38,6 +38,7 @@ async function createActor(name = "Update Tester"): Promise<SessionUser> {
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 

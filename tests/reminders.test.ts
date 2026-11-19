@@ -7,7 +7,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth";
-import { markLeave } from "@/lib/leaves";
+import { applyForLeave } from "@/lib/leaves";
 import {
   ASSIGNMENT_DUE_JOB,
   DAILY_REMINDER_JOB,
@@ -50,6 +50,7 @@ async function createUser(
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 
@@ -68,11 +69,20 @@ async function addUpdate(userId: string): Promise<void> {
 }
 
 async function addLeave(user: SessionUser): Promise<void> {
-  const result = await markLeave(user, {
+  const result = await applyForLeave(user, {
     fromDate: "2026-11-17",
     toDate: "2026-11-17",
+    reason: "Approved holiday",
   });
-  if (result.ok) createdLeaveIds.push(result.leave.id);
+  // Self-applied leave starts pending, so approve it here: the reminders must
+  // exclude people whose leave is actually approved.
+  if (result.ok) {
+    createdLeaveIds.push(result.leave.id);
+    await prisma.leave.update({
+      where: { id: result.leave.id },
+      data: { status: "Approved" },
+    });
+  }
 }
 
 async function addAssignment({

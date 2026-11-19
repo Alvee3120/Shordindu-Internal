@@ -42,6 +42,7 @@ async function createUser(
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 
@@ -111,13 +112,18 @@ describe("assignment creation", () => {
   });
 
   it("expands a department into its active members", async () => {
+    // A unique department keeps the assertion stable even when the database
+    // already holds real users in the seeded departments.
+    const department = `Dept ${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
     const creator = await createUser("Creator", Role.Manager, "HR");
-    const member = await createUser("IT Member", Role.Employee, "Supply Chain");
+    const member = await createUser("IT Member", Role.Employee, department);
     await createUser("Other Member", Role.Employee, "Finance");
 
     const result = await createAssignment(creator, {
       contentHtml: "<p>Department task</p>",
-      department: "Supply Chain",
+      department,
     });
 
     expect(result.ok).toBe(true);

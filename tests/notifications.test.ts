@@ -42,6 +42,7 @@ async function createUser(
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 

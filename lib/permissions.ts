@@ -10,7 +10,6 @@ type MaybeRole = UserRole | null | undefined;
 
 const ALL_ROLES: UserRole[] = ["Admin", "HR", "Manager", "Employee"];
 const APPROVERS: UserRole[] = ["Admin", "HR", "Manager"];
-const HR_AND_ADMIN: UserRole[] = ["Admin", "HR"];
 
 function hasAnyRole(role: MaybeRole, allowed: readonly UserRole[]): boolean {
   return role != null && allowed.includes(role);
@@ -53,16 +52,21 @@ export function canSetRole(actorRole: MaybeRole, newRole: UserRole): boolean {
 
 /** Add, edit and delete holidays. */
 export function canManageHolidays(role: MaybeRole): boolean {
-  return hasAnyRole(role, HR_AND_ADMIN);
+  return hasAnyRole(role, APPROVERS);
 }
 
 /** Change the weekend setting. */
 export function canManageWeekendDays(role: MaybeRole): boolean {
-  return hasAnyRole(role, HR_AND_ADMIN);
+  return hasAnyRole(role, APPROVERS);
 }
 
 /** Mark leave for someone else. */
 export function canMarkLeaveForOthers(role: MaybeRole): boolean {
+  return hasAnyRole(role, APPROVERS);
+}
+
+/** Approve or reject a leave request. */
+export function canApproveLeave(role: MaybeRole): boolean {
   return hasAnyRole(role, APPROVERS);
 }
 
@@ -73,10 +77,15 @@ export function canViewAuditLog(role: MaybeRole): boolean {
 
 /** Change departments and the reminder time. */
 export function canManageSettings(role: MaybeRole): boolean {
-  return role === "Admin";
+  return hasAnyRole(role, APPROVERS);
 }
 
 /** See the "Not submitted today" list. */
 export function canViewNotSubmittedList(role: MaybeRole): boolean {
+  return hasAnyRole(role, APPROVERS);
+}
+
+/** Post, edit and delete announcements. */
+export function canPostAnnouncement(role: MaybeRole): boolean {
   return hasAnyRole(role, APPROVERS);
 }

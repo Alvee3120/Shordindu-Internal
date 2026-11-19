@@ -1,4 +1,4 @@
-import { UserStatus } from "@prisma/client";
+import { LeaveStatus, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { dhakaToday, isWeekend } from "@/lib/time";
 import { getWeekendDays } from "@/lib/settings";
@@ -22,13 +22,18 @@ function parseDateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
-/** Ids of users whose leave range covers the given Dhaka date. */
+/** Ids of users whose approved leave range covers the given Dhaka date. */
 export async function getOnLeaveUserIds(
   dateString: string = dhakaToday(),
 ): Promise<Set<string>> {
   const date = parseDateOnly(dateString);
   const leaves = await prisma.leave.findMany({
-    where: { fromDate: { lte: date }, toDate: { gte: date } },
+    where: {
+      fromDate: { lte: date },
+      toDate: { gte: date },
+      // Pending or rejected requests never mark someone as away.
+      status: LeaveStatus.Approved,
+    },
     select: { userId: true },
   });
   return new Set(leaves.map((leave) => leave.userId));

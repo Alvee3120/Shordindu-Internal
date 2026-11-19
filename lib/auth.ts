@@ -15,6 +15,7 @@ export interface SessionUser {
   status: UserStatus;
   department: string;
   position: string;
+  avatarFile: string | null;
 }
 
 function hashToken(token: string): string {
@@ -36,6 +37,7 @@ function toSessionUser(user: User): SessionUser {
     status: user.status,
     department: user.department,
     position: user.position,
+    avatarFile: user.avatarFile,
   };
 }
 

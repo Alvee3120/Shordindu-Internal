@@ -1,16 +1,21 @@
 import {
   runAssignmentDueReminder,
+  runCalendarReminder,
   runDailyUpdateReminder,
 } from "../jobs/reminders";
 import { enqueueEmail } from "../lib/queue";
 
 async function main() {
-  const which = process.argv[2] === "due" ? "due" : "daily";
+  const argument = process.argv[2];
+  const which =
+    argument === "due" ? "due" : argument === "calendar" ? "calendar" : "daily";
 
   const result =
     which === "due"
       ? await runAssignmentDueReminder(enqueueEmail)
-      : await runDailyUpdateReminder(enqueueEmail);
+      : which === "calendar"
+        ? await runCalendarReminder(enqueueEmail)
+        : await runDailyUpdateReminder(enqueueEmail);
 
   console.log(`[REMINDER ${which.toUpperCase()}]`);
   console.log(JSON.stringify(result, null, 2));

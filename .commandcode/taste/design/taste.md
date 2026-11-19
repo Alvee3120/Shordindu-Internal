@@ -8,4 +8,8 @@
 - Avoids per-user pickers (dropdowns listing every person) in filter bars when the user base is or will be large; prefers coarse filters (department) plus free-text search instead. Confidence: 0.6
 - Filter controls should sit on a single horizontal line on desktop (stacking only on narrow screens) rather than each taking its own row. Confidence: 0.5
 - When a picker must target individual people from a large staff list, wants a cascading pair of dropdowns — Department first (defaults to "All") narrowing the People list, and picking a person with no department auto-fills that person's department — instead of one long scrollable list of everyone. Confidence: 0.65
+- Expects open views to stay in sync on their own: other users' edits and deletions must appear without the user reloading the page — a manual refresh requirement reads as a bug. Confidence: 0.5
+- Signals state with a filled surface, not with small dot/indicator markers — e.g. a day with content should have the whole cell's background colour change rather than tiny dots. Confidence: 0.55
+- Completion should be non-destructive: finished items stay in history (the record is never dropped) — they only stop showing the "active" visual state, and stay reachable by opening that day/record. Confidence: 0.6
+- Expects every main section/page to be reachable from the primary navigation: a page linked only inside the top-right user menu (behind a click) reads as missing/hidden. Confidence: 0.45
 - Internal encoding/storage formats must never surface in the interface — input fields and rendered text should show human-readable content (e.g. `@Name`, not a token like `@[Name](id)`). Confidence: 0.5

@@ -7,7 +7,9 @@ import {
   canManageSettings,
   canManageUsers,
   canManageWeekendDays,
+  canApproveLeave,
   canMarkLeaveForOthers,
+  canPostAnnouncement,
   canPostContent,
   canSetRole,
   canViewAuditLog,
@@ -71,19 +73,19 @@ describe("permission table", () => {
     });
   });
 
-  it("restricts holiday management to HR and Admin", () => {
+  it("restricts holiday management to Manager, HR and Admin", () => {
     expectForEveryRole(canManageHolidays, {
       Employee: false,
-      Manager: false,
+      Manager: true,
       HR: true,
       Admin: true,
     });
   });
 
-  it("restricts the weekend setting to HR and Admin", () => {
+  it("restricts the weekend setting to Manager, HR and Admin", () => {
     expectForEveryRole(canManageWeekendDays, {
       Employee: false,
-      Manager: false,
+      Manager: true,
       HR: true,
       Admin: true,
     });
@@ -107,17 +109,35 @@ describe("permission table", () => {
     });
   });
 
-  it("lets only Admin change departments and reminder settings", () => {
+  it("restricts departments and reminder settings to Manager, HR and Admin", () => {
     expectForEveryRole(canManageSettings, {
       Employee: false,
-      Manager: false,
-      HR: false,
+      Manager: true,
+      HR: true,
       Admin: true,
     });
   });
 
   it("restricts the not-submitted list to Manager, HR and Admin", () => {
     expectForEveryRole(canViewNotSubmittedList, {
+      Employee: false,
+      Manager: true,
+      HR: true,
+      Admin: true,
+    });
+  });
+
+  it("restricts announcements to Manager, HR and Admin", () => {
+    expectForEveryRole(canPostAnnouncement, {
+      Employee: false,
+      Manager: true,
+      HR: true,
+      Admin: true,
+    });
+  });
+
+  it("restricts leave approval to Manager, HR and Admin", () => {
+    expectForEveryRole(canApproveLeave, {
       Employee: false,
       Manager: true,
       HR: true,
@@ -163,6 +183,8 @@ describe("unauthenticated users", () => {
       canMarkLeaveForOthers,
       canViewAuditLog,
       canViewNotSubmittedList,
+      canPostAnnouncement,
+      canApproveLeave,
     ];
     for (const check of checks) {
       expect(check(null)).toBe(false);

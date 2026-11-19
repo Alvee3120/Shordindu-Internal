@@ -6,6 +6,15 @@ import { getDummyPasswordHash, verifyPassword } from "@/lib/password";
 export const LOGIN_MAX_ATTEMPTS = 5;
 export const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * The failed-attempt lockout protects real deployments, but it gets in the way
+ * while developing by hand. It is therefore skipped only when NODE_ENV is
+ * exactly "development"; production and the test run both enforce it.
+ */
+export function loginLockoutEnabled(): boolean {
+  return process.env.NODE_ENV !== "development";
+}
+
 export type LoginOutcome =
   | { ok: true; user: User }
   | { ok: false; reason: "locked" }
@@ -29,21 +38,26 @@ export async function loginWithPassword({
 }): Promise<LoginOutcome> {
   const normalizedEmail = email.trim().toLowerCase();
   const now = new Date();
-  const windowStart = new Date(now.getTime() - LOGIN_ATTEMPT_WINDOW_MS);
 
-  const [emailAttempts, ipAttempts] = await Promise.all([
-    prisma.loginAttempt.count({
-      where: { email: normalizedEmail, createdAt: { gte: windowStart } },
-    }),
-    ip
-      ? prisma.loginAttempt.count({
-          where: { ip, createdAt: { gte: windowStart } },
-        })
-      : Promise.resolve(0),
-  ]);
+  if (loginLockoutEnabled()) {
+    const windowStart = new Date(now.getTime() - LOGIN_ATTEMPT_WINDOW_MS);
+    const [emailAttempts, ipAttempts] = await Promise.all([
+      prisma.loginAttempt.count({
+        where: { email: normalizedEmail, createdAt: { gte: windowStart } },
+      }),
+      ip
+        ? prisma.loginAttempt.count({
+            where: { ip, createdAt: { gte: windowStart } },
+          })
+        : Promise.resolve(0),
+    ]);
 
-  if (emailAttempts >= LOGIN_MAX_ATTEMPTS || ipAttempts >= LOGIN_MAX_ATTEMPTS) {
-    return { ok: false, reason: "locked" };
+    if (
+      emailAttempts >= LOGIN_MAX_ATTEMPTS ||
+      ipAttempts >= LOGIN_MAX_ATTEMPTS
+    ) {
+      return { ok: false, reason: "locked" };
+    }
   }
 
   const user = await prisma.user.findUnique({

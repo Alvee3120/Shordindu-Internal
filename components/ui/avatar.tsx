@@ -1,4 +1,6 @@
+/* eslint-disable @next/next/no-img-element */
 import { cn } from "@/lib/utils";
+import { avatarUrl } from "@/lib/avatar-url";
 
 const sizes = {
   sm: "h-8 w-8 text-xs",
@@ -14,15 +16,40 @@ function initials(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
+/**
+ * Profile picture, falling back to initials when the user has none.
+ * A plain <img> is used deliberately: these are local, already-resized files
+ * served by our own route, so Next's optimizer would add no value.
+ */
 export function Avatar({
   name,
+  avatarFile,
   size = "md",
   className,
 }: {
   name: string;
+  avatarFile?: string | null;
   size?: keyof typeof sizes;
   className?: string;
 }) {
+  const url = avatarUrl(avatarFile ?? null);
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={name}
+        width={48}
+        height={48}
+        className={cn(
+          "shrink-0 select-none rounded-full object-cover",
+          sizes[size],
+          className
+        )}
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden

@@ -216,3 +216,41 @@ export function buildAssignmentDueEmail({
     html: `<p>Hi ${name},</p><p>This assignment is due today:</p><p><strong>${shortSummary}</strong></p><p><a href="${link}">Open the assignment</a></p>`,
   };
 }
+
+function escapeCalendarHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function buildCalendarReminderEmail({
+  to,
+  name,
+  title,
+  notes,
+  link,
+}: {
+  to: string;
+  name: string;
+  title: string;
+  notes: string | null;
+  link: string;
+}): EmailPayload {
+  const detail = notes?.trim() ? `\n\n${notes.trim()}` : "";
+  return {
+    to,
+    subject: `Reminder today: ${title}`,
+    text: `Hi ${name}, you have this on your calendar today: ${title}${detail}\n\nOpen your calendar: ${link}`,
+    html: [
+      `<p>Hi ${escapeCalendarHtml(name)},</p>`,
+      `<p>You have this on your calendar today:</p>`,
+      `<p style="font-size:16px;font-weight:bold">${escapeCalendarHtml(title)}</p>`,
+      notes?.trim()
+        ? `<p>${escapeCalendarHtml(notes.trim())}</p>`
+        : "",
+      `<p><a href="${link}">Open your calendar</a></p>`,
+    ].join(""),
+  };
+}

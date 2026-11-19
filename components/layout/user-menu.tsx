@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import type { SessionUser } from "@/lib/auth";
 
@@ -31,7 +32,11 @@ export function UserMenu({ user }: { user: SessionUser }) {
         aria-expanded={open}
         className="flex items-center gap-2 rounded-md px-1.5 py-1 transition hover:bg-accent"
       >
-        <Avatar name={user.name} size="sm" />
+        <Avatar
+          name={user.name}
+          avatarFile={user.avatarFile}
+          size="sm"
+        />
         <span className="hidden text-left sm:block">
           <span className="block max-w-[10rem] truncate text-sm font-medium leading-tight">
             {user.name}
@@ -65,12 +70,22 @@ export function UserMenu({ user }: { user: SessionUser }) {
               </p>
             </div>
 
+            <Link
+              href="/profile"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm transition hover:bg-accent"
+            >
+              <UserRound className="h-4 w-4" />
+              Profile
+            </Link>
+
             <button
               type="button"
               role="menuitem"
               onClick={() => void signOut()}
               disabled={pending}
-              className="mt-2 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
+              className="mt-1 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-destructive transition hover:bg-destructive/10 disabled:opacity-60"
             >
               <LogOut className="h-4 w-4" />
               {pending ? "Signing out..." : "Sign out"}

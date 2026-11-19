@@ -2,7 +2,11 @@ import { afterAll, describe, expect, it } from "vitest";
 import { Role, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
-import { LOGIN_MAX_ATTEMPTS, loginWithPassword } from "@/lib/login";
+import {
+  LOGIN_MAX_ATTEMPTS,
+  loginLockoutEnabled,
+  loginWithPassword,
+} from "@/lib/login";
 
 const PASSWORD = "correct horse battery";
 const emails: string[] = [];
@@ -107,6 +111,45 @@ describe("loginWithPassword", () => {
         ip,
       }),
     ).toEqual({ ok: false, reason: "locked" });
+  });
+
+  it("skips the lockout only when NODE_ENV is development", async () => {
+    // NODE_ENV is typed as read-only, but the behaviour under test depends on
+    // it, so the test has to swap it deliberately.
+    const env = process.env as Record<string, string | undefined>;
+    const original = env.NODE_ENV;
+    const user = await createUser();
+
+    try {
+      // Development: repeated wrong passwords never lock the account.
+      env.NODE_ENV = "development";
+      expect(loginLockoutEnabled()).toBe(false);
+
+      for (let attempt = 0; attempt < LOGIN_MAX_ATTEMPTS + 2; attempt++) {
+        expect(
+          await loginWithPassword({ email: user.email, password: "wrong" }),
+        ).toEqual({ ok: false, reason: "invalid" });
+      }
+      // The correct password still works, because nothing locked.
+      const success = await loginWithPassword({
+        email: user.email,
+        password: PASSWORD,
+      });
+      expect(success.ok).toBe(true);
+
+      // Production: the lockout is enforced again.
+      env.NODE_ENV = "production";
+      expect(loginLockoutEnabled()).toBe(true);
+
+      for (let attempt = 0; attempt < LOGIN_MAX_ATTEMPTS; attempt++) {
+        await loginWithPassword({ email: user.email, password: "wrong" });
+      }
+      expect(
+        await loginWithPassword({ email: user.email, password: PASSWORD }),
+      ).toEqual({ ok: false, reason: "locked" });
+    } finally {
+      env.NODE_ENV = original;
+    }
   });
 
   it("returns inactive when the password is right but the account is not Active", async () => {

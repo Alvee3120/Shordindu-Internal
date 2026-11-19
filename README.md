@@ -149,6 +149,9 @@ The system includes an automated database health route:
 │   ├── user-management.ts   # Approve, reject, add and edit users
 │   ├── updates.ts           # Daily updates, late flag and same-day lock
 │   ├── assignments.ts       # Assignment lifecycle, statuses and permissions
+│   ├── announcements.ts     # Notice board: post, edit, delete and email everyone
+│   ├── chat.ts              # Global group chat: send, edit, delete, mentions, paging
+│   ├── calendar.ts          # Personal calendar: events, assignment due dates, reminders
 │   ├── leaves.ts            # Leave marking and listing rules
 │   ├── holidays.ts          # Holiday calendar management
 │   ├── attendance.ts        # Not-submitted-today calculation
@@ -195,6 +198,8 @@ The system includes an automated database health route:
 - `npm run prisma:seed`: Seed departments, settings and the first Admin
 - `npm run seed:feed`: Seed 10,000 demo updates for feed performance testing
 - `npm run seed:feed:clear`: Remove the demo users and updates
+- `npm run seed:chat`: Replace the group chat with ~36 demo messages between Alvee, Nusrat, Ezaz and Rifat
+- `npm run seed:chat:clear`: Empty the group chat and its mentions/read markers
 - `npm run digest`: Send the pending notification digest immediately (dev helper)
 - `npm run reminder:daily`: Run the 7 PM update reminder now (idempotent per day)
 - `npm run reminder:due`: Run the 9 AM assignment-due reminder now

@@ -79,7 +79,9 @@ Use exactly this unless I approve a change:
 | Edit or cancel others' assignment              | No       | Yes     | Yes | Yes   |
 | Approve or reject signups, add users, set role | No       | Yes     | Yes | Yes   |
 | Grant the Admin role                           | No       | No      | No  | Yes   |
-| Manage holidays                                | No       | No      | Yes | Yes   |
+| Manage holidays                                | No       | Yes     | Yes | Yes   |
+| Change weekend days setting                    | No       | Yes     | Yes | Yes   |
+| Edit departments and reminder time             | No       | Yes     | Yes | Yes   |
 | Mark leave for others                          | No       | Yes     | Yes | Yes   |
 | See audit log                                  | No       | No      | No  | Yes   |
 | See 'Not submitted today' list                 | No       | Yes     | Yes | Yes   |
@@ -221,8 +223,8 @@ Add indexes for: updates (update\_date, user\_id), comments (target\_type, targe
 
 **Goal:** accurate missing-update tracking.
 
-- Weekend days setting (default Friday only), editable by Admin or HR.
-- Holiday calendar (HR and Admin add, edit, delete).
+- Weekend days setting (default Friday only), editable by Manager, HR or Admin.
+- Holiday calendar (Manager, HR and Admin add, edit, delete).
 - Leave: a user can mark their own leave for a date or range; Manager, HR and Admin can mark for others. Show an 'On leave' badge.
 - 'Not submitted today' list (Manager, HR, Admin): Active users who have not posted today, excluding weekends, holidays and users on leave. Show it as a dashboard card and a page. **Done when:** the list is correct in tests covering a weekend, a holiday and a leave day.
 
@@ -239,7 +241,7 @@ Add indexes for: updates (update\_date, user\_id), comments (target\_type, targe
 **Goal:** accountability and configuration.
 
 - Admin-only audit log page with filters (user, action, date) and pagination, showing before and after values.
-- Admin settings page: departments, weekend days, reminder time. **Done when:** earlier actions appear correctly in the audit log and non-Admins cannot open it.
+- Settings page: departments, weekend days, reminder time, open to Manager, HR and Admin. The audit log page stays Admin-only. **Done when:** earlier actions appear correctly in the audit log and only Admins can open it.
 
 ### Module 13: Testing, hardening and deployment
 

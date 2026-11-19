@@ -4,11 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  CalendarRange,
   ClipboardList,
   FileText,
+  Megaphone,
+  MessageCircle,
   Newspaper,
   Settings,
   ShieldCheck,
+  UserRound,
   UserX,
   Users,
   type LucideIcon,
@@ -16,6 +20,7 @@ import {
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ChatFab } from "@/components/chat/chat-fab";
 import { UserCard } from "@/components/ui/user-card";
 import { Logo } from "@/components/ui/logo";
 import {
@@ -58,6 +63,27 @@ const NAV_ITEMS: NavItem[] = [
     visible: () => true,
   },
   {
+    href: "/announcements",
+    label: "Announcements",
+    shortLabel: "Notices",
+    icon: Megaphone,
+    visible: () => true,
+  },
+  {
+    href: "/chat",
+    label: "Group chat",
+    shortLabel: "Chat",
+    icon: MessageCircle,
+    visible: () => true,
+  },
+  {
+    href: "/calendar",
+    label: "My Calendar",
+    shortLabel: "Calendar",
+    icon: CalendarRange,
+    visible: () => true,
+  },
+  {
     href: "/users",
     label: "Users",
     shortLabel: "Users",
@@ -84,6 +110,13 @@ const NAV_ITEMS: NavItem[] = [
     shortLabel: "Audit",
     icon: ShieldCheck,
     visible: canViewAuditLog,
+  },
+  {
+    href: "/profile",
+    label: "Profile",
+    shortLabel: "Profile",
+    icon: UserRound,
+    visible: () => true,
   },
   {
     href: "/settings",
@@ -152,6 +185,7 @@ export function AppShell({
             name={user.name}
             position={user.position}
             department={user.department}
+            avatarFile={user.avatarFile}
             size="sm"
             tone="light"
           />
@@ -204,6 +238,8 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      <ChatFab />
     </div>
   );
 }

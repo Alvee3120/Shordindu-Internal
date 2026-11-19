@@ -14,9 +14,12 @@
     "prisma:seed": "prisma db seed",
     "seed:feed": "tsx scripts/seed-feed.ts",
     "seed:feed:clear": "tsx scripts/seed-feed.ts --clear",
+    "seed:chat": "tsx scripts/seed-chat.ts",
+    "seed:chat:clear": "tsx scripts/seed-chat.ts --clear",
     "digest": "tsx scripts/digest.ts",
     "reminder:daily": "tsx scripts/run-reminder.ts daily",
-    "reminder:due": "tsx scripts/run-reminder.ts due"
+    "reminder:due": "tsx scripts/run-reminder.ts due",
+    "reminder:calendar": "tsx scripts/run-reminder.ts calendar"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +43,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sanitize-html": "^2.18.2",
+    "sharp": "^0.35.5",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tippy.js": "^6.3.7",
