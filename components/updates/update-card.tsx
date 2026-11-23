@@ -38,6 +38,7 @@ export function UpdateCard({
           name={author.name}
           position={author.position}
           department={author.department}
+          avatarFile={author.avatarFile}
           size="sm"
         />
         <div className="shrink-0 text-right text-xs text-muted-foreground">

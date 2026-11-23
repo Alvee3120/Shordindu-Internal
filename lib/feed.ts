@@ -23,6 +23,7 @@ export interface FeedItem {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   updateDate: string;
   postedAt: string;
@@ -37,6 +38,7 @@ export interface PersonOption {
   name: string;
   department: string;
   position: string;
+  avatarFile: string | null;
 }
 
 const cursorSchema = z.object({
@@ -54,7 +56,7 @@ export function encodeCursor(cursor: FeedCursor): string {
 export function decodeCursor(raw: string): FeedCursor | null {
   try {
     const parsed = cursorSchema.safeParse(
-      JSON.parse(Buffer.from(raw, "base64url").toString("utf8")),
+      JSON.parse(Buffer.from(raw, "base64url").toString("utf8"))
     );
     return parsed.success ? parsed.data : null;
   } catch {
@@ -88,6 +90,7 @@ interface FeedRow {
   authorName: string;
   authorPosition: string;
   authorDepartment: string;
+  authorAvatarFile: string | null;
   updateDate: Date;
   postedAt: Date;
   isLate: boolean;
@@ -104,6 +107,7 @@ function toItem(row: FeedRow): FeedItem {
       name: row.authorName,
       position: row.authorPosition,
       department: row.authorDepartment,
+      avatarFile: row.authorAvatarFile,
     },
     updateDate: row.updateDate.toISOString().slice(0, 10),
     postedAt: row.postedAt.toISOString(),
@@ -117,7 +121,7 @@ function toItem(row: FeedRow): FeedItem {
 export async function getFeed(
   filters: FeedFilters,
   cursor: FeedCursor | null = null,
-  limit = 10,
+  limit = 10
 ): Promise<{ items: FeedItem[]; nextCursor: string | null }> {
   const conditions: Prisma.Sql[] = [Prisma.sql`w.deleted_at IS NULL`];
 
@@ -170,6 +174,7 @@ export async function getFeed(
       u.name AS "authorName",
       u.position AS "authorPosition",
       u.department AS "authorDepartment",
+      u.avatar_file AS "authorAvatarFile",
       w.update_date AS "updateDate",
       w.posted_at AS "postedAt",
       w.is_late AS "isLate",
@@ -204,7 +209,13 @@ export async function getFeed(
 export async function listActivePeople(): Promise<PersonOption[]> {
   return prisma.user.findMany({
     where: { status: UserStatus.Active },
-    select: { id: true, name: true, department: true, position: true },
+    select: {
+      id: true,
+      name: true,
+      department: true,
+      position: true,
+      avatarFile: true,
+    },
     orderBy: { name: "asc" },
   });
 }

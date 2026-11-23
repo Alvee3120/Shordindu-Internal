@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SelectField } from "@/components/auth/field";
@@ -12,6 +13,7 @@ const statusVariants = {
   Pending: "pending",
   Rejected: "rejected",
   Disabled: "disabled",
+  Deleted: "disabled",
 } as const;
 
 export function ManagedUserRow({
@@ -19,6 +21,7 @@ export function ManagedUserRow({
   departments,
   canGrantAdmin,
   canManageAdmin,
+  canDelete,
   isSelf,
   onCompleted,
 }: {
@@ -26,6 +29,7 @@ export function ManagedUserRow({
   departments: string[];
   canGrantAdmin: boolean;
   canManageAdmin: boolean;
+  canDelete: boolean;
   isSelf: boolean;
   onCompleted: (result: ApiResult) => void;
 }) {
@@ -66,6 +70,20 @@ export function ManagedUserRow({
     const result = await callApi(`/api/users/${user.id}`, "PATCH", {
       status: user.status === "Active" ? "Disabled" : "Active",
     });
+    setPending(false);
+    onCompleted(result);
+  }
+
+  async function removeUser() {
+    if (
+      !window.confirm(
+        `Delete ${user.name}? Their posts stay, but the account can no longer sign in.`
+      )
+    ) {
+      return;
+    }
+    setPending(true);
+    const result = await callApi(`/api/users/${user.id}`, "DELETE");
     setPending(false);
     onCompleted(result);
   }
@@ -128,6 +146,18 @@ export function ManagedUserRow({
             disabled={pending}
           >
             {user.status === "Active" ? "Disable" : "Enable"}
+          </Button>
+        ) : null}
+        {canDelete && !isSelf && user.status !== "Deleted" ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => void removeUser()}
+            disabled={pending}
+          >
+            <Trash2 className="mr-1 h-3.5 w-3.5" />
+            Delete
           </Button>
         ) : null}
       </div>

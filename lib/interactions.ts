@@ -32,6 +32,7 @@ export interface CommentView {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   content: string;
   createdAt: Date;
@@ -224,7 +225,13 @@ export async function listComments(
     where: { targetType, targetId, deletedAt: null },
     include: {
       user: {
-        select: { id: true, name: true, position: true, department: true },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          department: true,
+          avatarFile: true,
+        },
       },
     },
     orderBy: { createdAt: "asc" },
@@ -319,6 +326,7 @@ export async function createComment(
         name: actor.name,
         position: actor.position,
         department: actor.department,
+        avatarFile: actor.avatarFile,
       },
       content: comment.content,
       createdAt: comment.createdAt,
@@ -338,7 +346,13 @@ export async function editComment(
     where: { id: commentId },
     include: {
       user: {
-        select: { id: true, name: true, position: true, department: true },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          department: true,
+          avatarFile: true,
+        },
       },
     },
   });

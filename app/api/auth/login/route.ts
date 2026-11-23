@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     switch (outcome.reason) {
       case "locked":
         return NextResponse.json(
-          { error: "Too many failed attempts. Try again in 15 minutes." },
+          { error: "Too many failed attempts. Try again in 2 minutes." },
           { status: 429 },
         );
       case "inactive":

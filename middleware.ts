@@ -15,7 +15,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  // Build the redirect from the public host, not Next's internal origin
+  // (which is localhost:3002 behind the nginx proxy).
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") ?? "http";
+  const origin = host ? `${proto}://${host}` : request.url;
+
+  return NextResponse.redirect(new URL("/login", origin));
 }
 
 export const config = {

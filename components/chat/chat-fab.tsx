@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { fetchJson } from "@/components/api-client";
+import { setAlertCount } from "@/lib/browser-alerts";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 30_000;
@@ -18,16 +19,32 @@ export function ChatFab() {
   const [unread, setUnread] = useState(0);
 
   const load = useCallback(async () => {
-    const result = await fetchJson<{ unreadCount: number }>(
-      "/api/chat/unread"
-    );
-    if (result.ok && result.data) setUnread(result.data.unreadCount);
+    const result = await fetchJson<{ unreadCount: number }>("/api/chat/unread");
+    if (result.ok && result.data) {
+      // A poll that started before the room was opened can resolve with a
+      // non-zero count after we reset it; on /chat the badge stays at zero.
+      const count = window.location.pathname.startsWith("/chat")
+        ? 0
+        : result.data.unreadCount;
+      setUnread(count);
+      setAlertCount("chat", count, {
+        title: "New group chat message",
+        body:
+          count === 1
+            ? "1 unread message in the group chat"
+            : `${count} unread messages in the group chat`,
+        link: "/chat",
+        tag: "group-chat",
+      });
+    }
   }, []);
 
   useEffect(() => {
     void load();
+    // Keep polling in background tabs too, so chat notifications arrive while
+    // the user is elsewhere; the browser throttles the timer on its own.
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
+      void load();
     }, POLL_INTERVAL_MS);
 
     return () => clearInterval(timer);
@@ -35,7 +52,10 @@ export function ChatFab() {
 
   // Reset the badge as soon as the user lands on the chat page.
   useEffect(() => {
-    if (pathname === "/chat") setUnread(0);
+    if (pathname === "/chat") {
+      setUnread(0);
+      setAlertCount("chat", 0);
+    }
   }, [pathname]);
 
   if (pathname === "/chat") return null;

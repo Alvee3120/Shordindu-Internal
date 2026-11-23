@@ -19,6 +19,7 @@ export interface CommentDto {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   content: string;
   createdAt: string;

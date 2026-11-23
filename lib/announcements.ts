@@ -15,15 +15,10 @@ import type { SessionUser } from "@/lib/auth";
  */
 
 export type AnnouncementFailure =
-  | "not_found"
-  | "forbidden"
-  | "empty_content"
-  | "locked"
-  | "no_changes";
+  "not_found" | "forbidden" | "empty_content" | "locked" | "no_changes";
 
 export type AnnouncementResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; reason: AnnouncementFailure };
+  { ok: true; data: T } | { ok: false; reason: AnnouncementFailure };
 
 export type AnnouncementSender = (payload: EmailPayload) => Promise<unknown>;
 
@@ -90,7 +85,7 @@ type AnnouncementWithAuthor = {
 
 function toView(
   announcement: AnnouncementWithAuthor,
-  viewer: SessionUser,
+  viewer: SessionUser
 ): AnnouncementView {
   return {
     id: announcement.id,
@@ -111,18 +106,20 @@ function prepareContent(rawHtml: string): { html: string; text: string } {
 }
 
 /**
- * Queues one announcement email per recipient and records an in-app
- * notification already marked as emailed, so the digest job does not send a
- * second copy.
+ * Records an in-app notification for everyone (always marked as emailed so
+ * the digest never sends a copy) and, only when the author asked for it,
+ * queues one email per recipient.
  */
 async function notifyAnnouncement({
   actor,
   announcement,
   send,
+  sendEmail,
 }: {
   actor: SessionUser;
   announcement: AnnouncementWithAuthor;
   send: AnnouncementSender;
+  sendEmail: boolean;
 }): Promise<void> {
   const users = await prisma.user.findMany({
     where: { status: UserStatus.Active, id: { not: actor.id } },
@@ -144,6 +141,8 @@ async function notifyAnnouncement({
     })),
   });
 
+  if (!sendEmail) return;
+
   for (const user of users) {
     await send(
       buildAnnouncementEmail({
@@ -153,7 +152,7 @@ async function notifyAnnouncement({
         title: announcement.title,
         summary: announcement.contentText,
         link: `${appUrl()}${link}`,
-      }),
+      })
     );
   }
 }
@@ -207,7 +206,7 @@ export function buildAnnouncementEmail({
 }
 
 export async function listAnnouncements(
-  viewer: SessionUser,
+  viewer: SessionUser
 ): Promise<AnnouncementView[]> {
   const announcements = await prisma.announcement.findMany({
     where: { deletedAt: null },
@@ -221,7 +220,7 @@ export async function listAnnouncements(
 
 export async function getAnnouncement(
   viewer: SessionUser,
-  announcementId: string,
+  announcementId: string
 ): Promise<AnnouncementView | null> {
   const announcement = await prisma.announcement.findUnique({
     where: { id: announcementId },
@@ -233,11 +232,13 @@ export async function getAnnouncement(
 
 export async function createAnnouncement(
   actor: SessionUser,
-  input: { title: string; contentHtml: string },
-  send: AnnouncementSender = enqueueEmail,
+  input: { title: string; contentHtml: string; sendEmail?: boolean },
+  send: AnnouncementSender = enqueueEmail
 ): Promise<AnnouncementResult<AnnouncementView>> {
-  if (!canPostAnnouncement(actor.role)) return { ok: false, reason: "forbidden" };
+  if (!canPostAnnouncement(actor.role))
+    return { ok: false, reason: "forbidden" };
 
+  const sendEmail = input.sendEmail ?? false;
   const { html, text } = prepareContent(input.contentHtml);
   if (!text) return { ok: false, reason: "empty_content" };
 
@@ -258,16 +259,20 @@ export async function createAnnouncement(
         action: "announcement.created",
         targetType: "announcement",
         targetId: announcement.id,
-        afterJson: { title: input.title, contentHtml: html },
+        afterJson: {
+          title: input.title,
+          contentHtml: html,
+          emailed: sendEmail,
+        },
       },
-      tx,
+      tx
     );
 
     return announcement;
   });
 
   try {
-    await notifyAnnouncement({ actor, announcement: created, send });
+    await notifyAnnouncement({ actor, announcement: created, send, sendEmail });
   } catch (error) {
     console.error("[announcements] Could not notify users", error);
   }
@@ -276,7 +281,7 @@ export async function createAnnouncement(
 }
 
 async function findAnnouncement(
-  announcementId: string,
+  announcementId: string
 ): Promise<AnnouncementWithAuthor | null> {
   const announcement = await prisma.announcement.findUnique({
     where: { id: announcementId },
@@ -289,9 +294,10 @@ async function findAnnouncement(
 export async function updateAnnouncement(
   actor: SessionUser,
   announcementId: string,
-  input: { title?: string; contentHtml?: string },
+  input: { title?: string; contentHtml?: string }
 ): Promise<AnnouncementResult<AnnouncementView>> {
-  if (!canPostAnnouncement(actor.role)) return { ok: false, reason: "forbidden" };
+  if (!canPostAnnouncement(actor.role))
+    return { ok: false, reason: "forbidden" };
 
   const announcement = await findAnnouncement(announcementId);
   if (!announcement) return { ok: false, reason: "not_found" };
@@ -299,7 +305,8 @@ export async function updateAnnouncement(
     return { ok: false, reason: "locked" };
   }
 
-  const data: { title?: string; contentHtml?: string; contentText?: string } = {};
+  const data: { title?: string; contentHtml?: string; contentText?: string } =
+    {};
   if (input.title !== undefined) data.title = input.title;
 
   if (input.contentHtml !== undefined) {
@@ -309,7 +316,8 @@ export async function updateAnnouncement(
     data.contentText = text;
   }
 
-  if (Object.keys(data).length === 0) return { ok: false, reason: "no_changes" };
+  if (Object.keys(data).length === 0)
+    return { ok: false, reason: "no_changes" };
 
   const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.announcement.update({
@@ -333,7 +341,7 @@ export async function updateAnnouncement(
           contentHtml: saved.contentHtml,
         },
       },
-      tx,
+      tx
     );
 
     return saved;
@@ -344,9 +352,10 @@ export async function updateAnnouncement(
 
 export async function deleteAnnouncement(
   actor: SessionUser,
-  announcementId: string,
+  announcementId: string
 ): Promise<AnnouncementResult<{ id: string }>> {
-  if (!canPostAnnouncement(actor.role)) return { ok: false, reason: "forbidden" };
+  if (!canPostAnnouncement(actor.role))
+    return { ok: false, reason: "forbidden" };
 
   const announcement = await findAnnouncement(announcementId);
   if (!announcement) return { ok: false, reason: "not_found" };
@@ -371,7 +380,7 @@ export async function deleteAnnouncement(
           contentHtml: announcement.contentHtml,
         },
       },
-      tx,
+      tx
     );
   });
 

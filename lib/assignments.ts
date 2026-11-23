@@ -59,6 +59,7 @@ export interface AssignmentAssigneeView {
   name: string;
   position: string;
   department: string;
+  avatarFile: string | null;
   status: AssigneeStatus;
   doneNote: string | null;
   doneAt: Date | null;
@@ -78,6 +79,7 @@ export interface AssignmentView {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   assignees: AssignmentAssigneeView[];
   progress: { done: number; total: number };
@@ -98,13 +100,25 @@ export interface AssignmentFilters {
 
 const assignmentInclude = {
   createdBy: {
-    select: { id: true, name: true, position: true, department: true },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      department: true,
+      avatarFile: true,
+    },
   },
   assignees: {
     where: { removedAt: null },
     include: {
       user: {
-        select: { id: true, name: true, position: true, department: true },
+        select: {
+          id: true,
+          name: true,
+          position: true,
+          department: true,
+          avatarFile: true,
+        },
       },
     },
     orderBy: { userId: "asc" },
@@ -132,6 +146,7 @@ function toView(
     name: assignee.user.name,
     position: assignee.user.position,
     department: assignee.user.department,
+    avatarFile: assignee.user.avatarFile,
     status: assignee.status,
     doneNote: assignee.doneNote,
     doneAt: assignee.doneAt,

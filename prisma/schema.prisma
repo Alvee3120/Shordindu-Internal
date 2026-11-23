@@ -19,6 +19,8 @@ enum UserStatus {
   Active
   Rejected
   Disabled
+  // Soft delete: the row and its content stay, but the account is unusable.
+  Deleted
 }
 
 enum OtpPurpose {
@@ -272,9 +274,13 @@ model ChatMessage {
   updatedAt DateTime  @updatedAt @map("updated_at")
   editedAt  DateTime? @map("edited_at")
   deletedAt DateTime? @map("deleted_at")
+  replyToId String?   @map("reply_to_id")
+  replyTo   ChatMessage?  @relation("ChatMessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatMessageReplies")
 
   @@index([createdAt])
   @@index([updatedAt])
+  @@index([replyToId])
   @@map("chat_messages")
 }
 

@@ -74,6 +74,7 @@ function AssigneeRow({
           name={assignee.name}
           position={assignee.position}
           department={assignee.department}
+          avatarFile={assignee.avatarFile}
           size="sm"
           className="min-w-0 flex-1"
         />
@@ -205,6 +206,7 @@ export function AssignmentCard({
           name={assignment.creator.name}
           position={assignment.creator.position}
           department={assignment.creator.department}
+          avatarFile={assignment.creator.avatarFile}
           size="sm"
         />
         <div className="text-right text-xs text-muted-foreground">

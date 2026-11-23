@@ -12,6 +12,7 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Shordindu",
   description: "Internal daily updates, assignments, and team collaboration",
+  icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }] },
 };
 
 export default function RootLayout({

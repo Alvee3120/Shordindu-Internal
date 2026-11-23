@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -8,9 +8,13 @@ import { Field } from "@/components/auth/field";
 
 type Step = "email" | "code" | "done";
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({
+  initialEmail = "",
+}: {
+  initialEmail?: string;
+}) {
   const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,34 +23,47 @@ export function ForgotPasswordForm() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
 
-  async function sendCode(event?: React.FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
-    setPending(true);
-    setError(null);
-    setFieldErrors({});
+  const autoSent = useRef(false);
 
-    try {
-      const response = await fetch("/api/auth/password/reset/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
+  const sendCode = useCallback(
+    async (event?: React.FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      setPending(true);
+      setError(null);
+      setFieldErrors({});
 
-      if (!response.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
-        return;
+      try {
+        const response = await fetch("/api/auth/password/reset/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error ?? "Something went wrong. Please try again.");
+          return;
+        }
+
+        setNotice(data.message ?? "Check your email for the reset code.");
+        setCode("");
+        setStep("code");
+      } catch {
+        setError("Network error. Please try again.");
+      } finally {
+        setPending(false);
       }
+    },
+    [email]
+  );
 
-      setNotice(data.message ?? "Check your email for the reset code.");
-      setCode("");
-      setStep("code");
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setPending(false);
-    }
-  }
+  // Invite emails link here with the address already filled in, so opening the
+  // link should send the code without the user pressing anything.
+  useEffect(() => {
+    if (!initialEmail || autoSent.current) return;
+    autoSent.current = true;
+    void sendCode();
+  }, [initialEmail, sendCode]);
 
   async function resetPassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -291,4 +291,55 @@ describe("notification digest", () => {
     );
     expect(secondRun).toEqual({ emails: 0, notifications: 0 });
   });
+
+  it("keeps group chat mentions out of digest emails", async () => {
+    const user = await createUser("Chat Mention Digest");
+
+    await createNotifications(null, [
+      {
+        userId: user.id,
+        type: "chat_mention",
+        message: "Chat mention notice",
+        link: "/chat#message-1",
+        email: false,
+      },
+      {
+        userId: user.id,
+        type: "comment",
+        message: "Comment notice",
+        link: "/#update-1",
+      },
+    ]);
+
+    // A row written before this rule existed must be skipped too.
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: "chat_mention",
+        message: "Legacy chat mention notice",
+        link: "/chat#message-old",
+      },
+    });
+
+    const sent: EmailPayload[] = [];
+    const result = await processPendingDigests(
+      async (payload) => {
+        sent.push(payload);
+      },
+      { userIds: [user.id] }
+    );
+
+    expect(result).toEqual({ emails: 1, notifications: 1 });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.html).toContain("Comment notice");
+    expect(sent[0]?.html).not.toContain("Chat mention");
+
+    const mentionRows = await prisma.notification.findMany({
+      where: { userId: user.id, type: "chat_mention" },
+    });
+    const createdMention = mentionRows.find(
+      (row) => row.link === "/chat#message-1"
+    );
+    expect(createdMention?.emailedAt).not.toBeNull();
+  });
 });

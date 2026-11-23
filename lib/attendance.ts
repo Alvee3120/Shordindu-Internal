@@ -8,6 +8,7 @@ export interface MissingUser {
   name: string;
   position: string;
   department: string;
+  avatarFile: string | null;
 }
 
 export interface NotSubmittedSummary {
@@ -24,7 +25,7 @@ function parseDateOnly(value: string): Date {
 
 /** Ids of users whose approved leave range covers the given Dhaka date. */
 export async function getOnLeaveUserIds(
-  dateString: string = dhakaToday(),
+  dateString: string = dhakaToday()
 ): Promise<Set<string>> {
   const date = parseDateOnly(dateString);
   const leaves = await prisma.leave.findMany({
@@ -72,7 +73,13 @@ export async function getNotSubmittedToday(): Promise<NotSubmittedSummary> {
   const [users, submitted, onLeave] = await Promise.all([
     prisma.user.findMany({
       where: { status: UserStatus.Active },
-      select: { id: true, name: true, position: true, department: true },
+      select: {
+        id: true,
+        name: true,
+        position: true,
+        department: true,
+        avatarFile: true,
+      },
       orderBy: { name: "asc" },
     }),
     prisma.update.findMany({
@@ -90,7 +97,7 @@ export async function getNotSubmittedToday(): Promise<NotSubmittedSummary> {
     reason: null,
     holidayName: null,
     missing: users.filter(
-      (user) => !submittedIds.has(user.id) && !onLeave.has(user.id),
+      (user) => !submittedIds.has(user.id) && !onLeave.has(user.id)
     ),
   };
 }

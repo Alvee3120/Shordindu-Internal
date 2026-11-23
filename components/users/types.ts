@@ -1,6 +1,7 @@
 export type ManagedRole = "Admin" | "HR" | "Manager" | "Employee";
 
-export type ManagedStatus = "Pending" | "Active" | "Rejected" | "Disabled";
+export type ManagedStatus =
+  "Pending" | "Active" | "Rejected" | "Disabled" | "Deleted";
 
 export interface PendingUserDto {
   id: string;

@@ -7,6 +7,7 @@ export interface AssignmentAssigneeDto {
   name: string;
   position: string;
   department: string;
+  avatarFile: string | null;
   status: AssigneeStatusDto;
   doneNote: string | null;
   doneAt: string | null;
@@ -26,6 +27,7 @@ export interface AssignmentDto {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   assignees: AssignmentAssigneeDto[];
   progress: { done: number; total: number };
@@ -40,4 +42,5 @@ export interface PersonOptionDto {
   name: string;
   department: string;
   position: string;
+  avatarFile: string | null;
 }

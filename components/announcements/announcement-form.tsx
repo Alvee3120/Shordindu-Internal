@@ -24,6 +24,7 @@ export function AnnouncementForm({
   const toast = useToast();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [content, setContent] = useState(initial?.contentHtml ?? "");
+  const [sendEmail, setSendEmail] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +45,11 @@ export function AnnouncementForm({
     const result = await callApiJson<{ announcement: AnnouncementDto }>(
       initial ? `/api/announcements/${initial.id}` : "/api/announcements",
       initial ? "PATCH" : "POST",
-      { title: title.trim(), contentHtml: content }
+      {
+        title: title.trim(),
+        contentHtml: content,
+        ...(initial ? {} : { sendEmail }),
+      }
     );
     setSaving(false);
 
@@ -54,7 +59,11 @@ export function AnnouncementForm({
     }
 
     toast.show(
-      initial ? "Announcement updated." : "Announcement posted. Everyone was emailed.",
+      initial
+        ? "Announcement updated."
+        : sendEmail
+          ? "Announcement posted and emailed."
+          : "Announcement posted. It is visible in the app only.",
       "success"
     );
     onSaved(result.data.announcement);
@@ -62,6 +71,7 @@ export function AnnouncementForm({
     if (!initial) {
       setTitle("");
       setContent("");
+      setSendEmail(false);
     }
   }
 
@@ -85,6 +95,21 @@ export function AnnouncementForm({
         onChange={setContent}
         placeholder="Write the notice or information you want everyone to know"
       />
+
+      {!initial ? (
+        <label className="flex items-start gap-2 rounded-md border border-border p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            onChange={(event) => setSendEmail(event.target.checked)}
+            disabled={saving}
+            className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+          />
+          <span className="font-medium">
+            Also send this announcement by email
+          </span>
+        </label>
+      ) : null}
 
       {error ? (
         <p

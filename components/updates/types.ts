@@ -2,6 +2,7 @@ export interface AuthorDto {
   name: string;
   position: string;
   department: string;
+  avatarFile: string | null;
 }
 
 export interface UpdateDto {

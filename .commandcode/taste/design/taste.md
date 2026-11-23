@@ -12,4 +12,7 @@
 - Signals state with a filled surface, not with small dot/indicator markers — e.g. a day with content should have the whole cell's background colour change rather than tiny dots. Confidence: 0.55
 - Completion should be non-destructive: finished items stay in history (the record is never dropped) — they only stop showing the "active" visual state, and stay reachable by opening that day/record. Confidence: 0.6
 - Expects every main section/page to be reachable from the primary navigation: a page linked only inside the top-right user menu (behind a click) reads as missing/hidden. Confidence: 0.45
+- Popovers/dropdowns (e.g. the notification bell panel) should dismiss on any outside click or navigation, not stay open until the trigger is clicked again — a panel that requires re-clicking the trigger reads as broken. Confidence: 0.5
+- Wants actions with costly/quota-consuming side effects (e.g. blasting an announcement to every user's email) to be opt-in: a distinct checkbox, unchecked by default, with the safe behavior being "in-app only". Confidence: 0.6
+- Dislikes explanatory helper/footnote copy under form controls (e.g. a muted line justifying why a checkbox is unchecked by default) — the control's own label is enough; rationale belongs in code comments or docs, not the UI. Confidence: 0.55
 - Internal encoding/storage formats must never surface in the interface — input fields and rendered text should show human-readable content (e.g. `@Name`, not a token like `@[Name](id)`). Confidence: 0.5

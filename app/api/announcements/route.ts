@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         error: parsed.error.issues[0]?.message ?? "Check the announcement.",
         fieldErrors: formatFieldErrors(parsed.error),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -38,7 +38,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(
-    { announcement: result.data, message: "Announcement posted." },
-    { status: 201 },
+    {
+      announcement: result.data,
+      message: parsed.data.sendEmail
+        ? "Announcement posted and emailed to everyone."
+        : "Announcement posted.",
+    },
+    { status: 201 }
   );
 }

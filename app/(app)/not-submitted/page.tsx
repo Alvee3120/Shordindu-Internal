@@ -57,6 +57,7 @@ export default async function NotSubmittedPage() {
                 name={missing.name}
                 position={missing.position}
                 department={missing.department}
+                avatarFile={missing.avatarFile}
                 size="sm"
               />
             </div>

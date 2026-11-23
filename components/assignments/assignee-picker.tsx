@@ -140,6 +140,7 @@ export function AssigneePicker({
                 <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-secondary py-1 pl-1 pr-1.5 text-xs">
                   <Avatar
                     name={person.name}
+                    avatarFile={person.avatarFile}
                     size="sm"
                     className="h-5 w-5 text-[9px]"
                   />

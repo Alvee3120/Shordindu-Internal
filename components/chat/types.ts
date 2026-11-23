@@ -11,4 +11,10 @@ export interface ChatMessageDto {
   createdAt: string;
   editedAt: string | null;
   canEdit: boolean;
+  replyTo: {
+    id: string;
+    content: string;
+    deleted: boolean;
+    author: { id: string; name: string };
+  } | null;
 }

@@ -327,13 +327,15 @@ export function buildInviteEmail({
   to: string;
   name: string;
 }): EmailPayload {
-  const resetUrl = `${appUrl()}/forgot-password`;
+  // Prefill the reset page so the invited user only has to open the link; the
+  // page then requests the OTP for this address automatically.
+  const resetUrl = `${appUrl()}/forgot-password?email=${encodeURIComponent(to)}`;
   return {
     to,
     subject: "You have been added to Shordindu Internal",
-    text: `Hi ${name}, an account has been created for you. Set your password at ${resetUrl} using this email address, then sign in.`,
+    text: `Hi ${name}, an account has been created for you. Open ${resetUrl} to receive a code by email and set your password, then sign in.`,
     account: "auth",
-    html: `<p>Hi ${escapeHtml(name)},</p><p>An account has been created for you.</p><p><a href="${resetUrl}">Set your password</a> using this email address, then sign in.</p>`,
+    html: `<p>Hi ${escapeHtml(name)},</p><p>An account has been created for you.</p><p><a href="${resetUrl}">Set your password</a> — the page fills in your email and sends you a one-time code, then you can sign in.</p>`,
   };
 }
 

@@ -2,9 +2,9 @@ import { UserStatus, type User } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getDummyPasswordHash, verifyPassword } from "@/lib/password";
 
-/** 5 failed password attempts per 15 minutes, per email and per IP. */
+/** 5 failed password attempts per 2 minutes, per email and per IP. */
 export const LOGIN_MAX_ATTEMPTS = 5;
-export const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+export const LOGIN_ATTEMPT_WINDOW_MS = 2 * 60 * 1000;
 
 /**
  * The failed-attempt lockout protects real deployments, but it gets in the way

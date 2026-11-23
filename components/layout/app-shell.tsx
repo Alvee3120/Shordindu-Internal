@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { BrowserAlerts } from "@/components/layout/browser-alerts";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ChatFab } from "@/components/chat/chat-fab";
@@ -169,6 +170,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-background">
+      <BrowserAlerts />
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar lg:flex">
         <div className="flex h-24 items-center justify-center px-5">
           <Link

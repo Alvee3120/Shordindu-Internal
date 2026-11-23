@@ -140,10 +140,14 @@ describe("announcement notification", () => {
     const sent: EmailPayload[] = [];
     const result = await createAnnouncement(
       asActor(author),
-      { title: "Email check", contentHtml: "<p>Read this</p>" },
+      {
+        title: "Email check",
+        contentHtml: "<p>Read this</p>",
+        sendEmail: true,
+      },
       async (payload) => {
         sent.push(payload);
-      },
+      }
     );
 
     expect(result.ok).toBe(true);
@@ -160,7 +164,35 @@ describe("announcement notification", () => {
     const notification = await prisma.notification.findFirst({
       where: { userId: first.id, type: "announcement" },
     });
-    expect(notification?.link).toBe(`/announcements#announcement-${result.data.id}`);
+    expect(notification?.link).toBe(
+      `/announcements#announcement-${result.data.id}`
+    );
+    expect(notification?.emailedAt).not.toBeNull();
+  });
+
+  it("does not email unless the author opts in", async () => {
+    const author = await createUser({ name: "Quiet Author", role: Role.HR });
+    const reader = await createUser({ name: "Quiet Reader" });
+
+    const sent: EmailPayload[] = [];
+    const result = await createAnnouncement(
+      asActor(author),
+      { title: "In-app only", contentHtml: "<p>Visible in the app</p>" },
+      async (payload) => {
+        sent.push(payload);
+      }
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    await trackAnnouncement(result.data.id);
+
+    expect(sent).toHaveLength(0);
+
+    const notification = await prisma.notification.findFirst({
+      where: { userId: reader.id, type: "announcement" },
+    });
+    expect(notification).not.toBeNull();
     expect(notification?.emailedAt).not.toBeNull();
   });
 });

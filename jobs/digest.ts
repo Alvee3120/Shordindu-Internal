@@ -32,7 +32,7 @@ function escapeHtml(value: string): string {
 
 export function buildDigestEmail(
   user: { name: string; email: string },
-  notifications: { message: string; link: string }[],
+  notifications: { message: string; link: string }[]
 ): EmailPayload | null {
   if (notifications.length === 0) return null;
 
@@ -43,7 +43,9 @@ export function buildDigestEmail(
   const text = [
     `Hi ${user.name},`,
     "",
-    ...notifications.map((notification) => `- ${notification.message}: ${base}${notification.link}`),
+    ...notifications.map(
+      (notification) => `- ${notification.message}: ${base}${notification.link}`
+    ),
     "",
     `Open Shordindu Internal: ${base}`,
   ].join("\n");
@@ -52,8 +54,8 @@ export function buildDigestEmail(
     .map(
       (notification) =>
         `<li><a href="${base}${notification.link}">${escapeHtml(
-          notification.message,
-        )}</a></li>`,
+          notification.message
+        )}</a></li>`
     )
     .join("");
 
@@ -73,11 +75,13 @@ export function buildDigestEmail(
  */
 export async function processPendingDigests(
   send: (payload: EmailPayload) => Promise<unknown> = sendEmail,
-  options: { userIds?: string[] } = {},
+  options: { userIds?: string[] } = {}
 ): Promise<{ emails: number; notifications: number }> {
   const pending = await prisma.notification.findMany({
     where: {
       emailedAt: null,
+      // Group chat mentions are bell-only by design; never put them in email.
+      type: { not: "chat_mention" },
       ...(options.userIds ? { userId: { in: options.userIds } } : {}),
     },
     include: {
@@ -110,7 +114,7 @@ export async function processPendingDigests(
     if (user.status === UserStatus.Active && user.email) {
       const payload = buildDigestEmail(
         { name: user.name, email: user.email },
-        rows.map((row) => ({ message: row.message, link: row.link })),
+        rows.map((row) => ({ message: row.message, link: row.link }))
       );
       if (payload) {
         try {

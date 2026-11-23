@@ -15,12 +15,15 @@ import { cn } from "@/lib/utils";
 export function CommentInput({
   value,
   onChange,
+  onSubmit,
   placeholder = "Write a comment, type @ to mention someone",
   disabled = false,
   rows = 3,
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** When set, Enter sends (Shift+Enter still inserts a newline). */
+  onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
   rows?: number;
@@ -93,22 +96,39 @@ export function CommentInput({
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (query === null || matches.length === 0) return;
+    const pickerOpen = query !== null && matches.length > 0;
 
-    if (event.key === "ArrowDown") {
+    if (pickerOpen) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setHighlighted((index) => (index + 1) % matches.length);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setHighlighted(
+          (index) => (index - 1 + matches.length) % matches.length
+        );
+      } else if (event.key === "Enter" || event.key === "Tab") {
+        const user = matches[highlighted];
+        if (!user) return;
+        event.preventDefault();
+        insert(user);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setQuery(null);
+      }
+      return;
+    }
+
+    // Enter sends; Shift+Enter keeps the newline. isComposing protects IME
+    // input, where Enter confirms the candidate instead of submitting.
+    if (
+      onSubmit &&
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
       event.preventDefault();
-      setHighlighted((index) => (index + 1) % matches.length);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setHighlighted((index) => (index - 1 + matches.length) % matches.length);
-    } else if (event.key === "Enter" || event.key === "Tab") {
-      const user = matches[highlighted];
-      if (!user) return;
-      event.preventDefault();
-      insert(user);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      setQuery(null);
+      onSubmit();
     }
   }
 

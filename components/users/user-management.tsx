@@ -193,6 +193,7 @@ export function UserManagement({
               departments={departments}
               canGrantAdmin={canGrantAdmin}
               canManageAdmin={canGrantAdmin}
+              canDelete={canGrantAdmin}
               isSelf={user.id === actorId}
               onCompleted={handleCompleted}
             />

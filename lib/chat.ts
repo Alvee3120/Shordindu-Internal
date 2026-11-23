@@ -6,6 +6,7 @@ import { sanitizeCommentText } from "@/lib/sanitize";
 import {
   extractMentionIdsFromText,
   replaceMentionTokens,
+  stripMentionTokens,
   toMentionTokensForActiveUsers,
 } from "@/lib/mentions";
 import { createNotifications } from "@/lib/notifications";
@@ -18,11 +19,11 @@ import type { SessionUser } from "@/lib/auth";
  * mention notification and the in-app bell cover it.
  */
 
-export type ChatFailure = "not_found" | "locked" | "empty_content";
+export type ChatFailure =
+  "not_found" | "locked" | "empty_content" | "invalid_reply";
 
 export type ChatResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; reason: ChatFailure };
+  { ok: true; data: T } | { ok: false; reason: ChatFailure };
 
 export function chatError(reason: ChatFailure): {
   status: number;
@@ -39,6 +40,11 @@ export function chatError(reason: ChatFailure): {
       };
     case "empty_content":
       return { status: 400, message: "Write something before sending." };
+    case "invalid_reply":
+      return {
+        status: 400,
+        message: "That message is no longer available to reply to.",
+      };
   }
 }
 
@@ -55,24 +61,38 @@ export interface ChatMessageView {
   createdAt: Date;
   editedAt: Date | null;
   canEdit: boolean;
+  replyTo: {
+    id: string;
+    content: string;
+    deleted: boolean;
+    author: { id: string; name: string };
+  } | null;
+}
+
+interface MessageWithRelations {
+  id: string;
+  userId: string;
+  content: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  user: {
+    id: string;
+    name: string;
+    position: string;
+    department: string;
+    avatarFile: string | null;
+  };
+  replyTo: {
+    id: string;
+    content: string;
+    deletedAt: Date | null;
+    user: { id: string; name: string };
+  } | null;
 }
 
 function toView(
-  message: {
-    id: string;
-    userId: string;
-    content: string;
-    createdAt: Date;
-    editedAt: Date | null;
-    user: {
-      id: string;
-      name: string;
-      position: string;
-      department: string;
-      avatarFile: string | null;
-    };
-  },
-  viewer: SessionUser,
+  message: MessageWithRelations,
+  viewer: SessionUser
 ): ChatMessageView {
   return {
     id: message.id,
@@ -83,6 +103,16 @@ function toView(
     canEdit:
       message.userId === viewer.id &&
       isSameDhakaDay(new Date(), message.createdAt),
+    replyTo: message.replyTo
+      ? {
+          id: message.replyTo.id,
+          author: message.replyTo.user,
+          content: message.replyTo.deletedAt
+            ? ""
+            : stripMentionTokens(message.replyTo.content).slice(0, 200),
+          deleted: Boolean(message.replyTo.deletedAt),
+        }
+      : null,
   };
 }
 
@@ -94,6 +124,14 @@ const messageInclude = {
       position: true,
       department: true,
       avatarFile: true,
+    },
+  },
+  replyTo: {
+    select: {
+      id: true,
+      content: true,
+      deletedAt: true,
+      user: { select: { id: true, name: true } },
     },
   },
 } as const;
@@ -134,7 +172,7 @@ export interface ChatCursor {
  */
 export async function listMessages(
   viewer: SessionUser,
-  options: { before?: string; limit?: number } = {},
+  options: { before?: string; limit?: number } = {}
 ): Promise<ChatPage> {
   const limit = Math.min(Math.max(options.limit ?? 30, 1), 100);
 
@@ -143,9 +181,7 @@ export async function listMessages(
     include: messageInclude,
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1,
-    ...(options.before
-      ? { cursor: { id: options.before }, skip: 1 }
-      : {}),
+    ...(options.before ? { cursor: { id: options.before }, skip: 1 } : {}),
   });
 
   const hasMore = rows.length > limit;
@@ -191,7 +227,7 @@ export async function listChanges(
   viewer: SessionUser,
   since: Date,
   sinceId: string,
-  limit = 100,
+  limit = 100
 ): Promise<ChatDelta> {
   const rows = await prisma.chatMessage.findMany({
     where: {
@@ -268,23 +304,39 @@ export async function markChatRead(userId: string): Promise<void> {
 export async function createMessage(
   actor: SessionUser,
   rawContent: string,
+  replyToId?: string
 ): Promise<ChatResult<ChatMessageView>> {
   const raw = sanitizeCommentText(rawContent);
   if (!raw) return { ok: false, reason: "empty_content" };
+
+  if (replyToId) {
+    const replied = await prisma.chatMessage.findUnique({
+      where: { id: replyToId },
+      select: { id: true, deletedAt: true },
+    });
+    if (!replied || replied.deletedAt) {
+      return { ok: false, reason: "invalid_reply" };
+    }
+  }
 
   const changedAt = await nextChangeStamp();
   const { created, content, mentionIds } = await prisma.$transaction(
     async (tx) => {
       const content = await toMentionTokensForActiveUsers(tx, raw);
       const created = await tx.chatMessage.create({
-        data: { userId: actor.id, content, updatedAt: changedAt },
+        data: {
+          userId: actor.id,
+          content,
+          updatedAt: changedAt,
+          replyToId: replyToId ?? null,
+        },
         include: messageInclude,
       });
       await replaceMentionTokens(
         tx,
         TargetType.chatMessage,
         created.id,
-        content,
+        content
       );
       await logAudit(
         {
@@ -292,9 +344,9 @@ export async function createMessage(
           action: "chat.message_sent",
           targetType: "chat",
           targetId: created.id,
-          afterJson: { content },
+          afterJson: { content, replyToId: replyToId ?? null },
         },
-        tx,
+        tx
       );
 
       return {
@@ -302,7 +354,7 @@ export async function createMessage(
         content,
         mentionIds: extractMentionIdsFromText(content),
       };
-    },
+    }
   );
 
   try {
@@ -313,7 +365,9 @@ export async function createMessage(
         type: "chat_mention",
         message: `${actor.name} mentioned you in the group chat`,
         link: `/chat#message-${created.id}`,
-      })),
+        // Chat mentions stay in the bell only; they are never emailed.
+        email: false,
+      }))
     );
   } catch (error) {
     console.error("[chat] Could not notify mentioned users", error);
@@ -325,7 +379,7 @@ export async function createMessage(
 export async function editMessage(
   actor: SessionUser,
   messageId: string,
-  rawContent: string,
+  rawContent: string
 ): Promise<ChatResult<ChatMessageView>> {
   const message = await prisma.chatMessage.findUnique({
     where: { id: messageId },
@@ -350,6 +404,12 @@ export async function editMessage(
       include: messageInclude,
     });
     await replaceMentionTokens(tx, TargetType.chatMessage, messageId, content);
+    // Replies show a preview of this message; move them in the change stream
+    // so other clients refresh that preview.
+    await tx.chatMessage.updateMany({
+      where: { replyToId: messageId },
+      data: { updatedAt: changedAt },
+    });
     await logAudit(
       {
         actorId: actor.id,
@@ -359,7 +419,7 @@ export async function editMessage(
         beforeJson: { content: message.content },
         afterJson: { content },
       },
-      tx,
+      tx
     );
     return updated;
   });
@@ -369,7 +429,7 @@ export async function editMessage(
 
 export async function deleteMessage(
   actor: SessionUser,
-  messageId: string,
+  messageId: string
 ): Promise<ChatResult<{ id: string }>> {
   const message = await prisma.chatMessage.findUnique({
     where: { id: messageId },
@@ -390,6 +450,11 @@ export async function deleteMessage(
     await tx.mention.deleteMany({
       where: { targetType: TargetType.chatMessage, targetId: messageId },
     });
+    // Refresh reply previews on other clients to show "message deleted".
+    await tx.chatMessage.updateMany({
+      where: { replyToId: messageId },
+      data: { updatedAt: changedAt },
+    });
     await logAudit(
       {
         actorId: actor.id,
@@ -398,7 +463,7 @@ export async function deleteMessage(
         targetId: messageId,
         beforeJson: { content: message.content },
       },
-      tx,
+      tx
     );
   });
 

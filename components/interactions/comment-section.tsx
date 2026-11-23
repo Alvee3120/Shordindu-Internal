@@ -71,6 +71,7 @@ export function CommentSection({
         name: user.name,
         position: user.position,
         department: user.department,
+        avatarFile: user.avatarFile,
       },
       content: draft,
       createdAt: new Date().toISOString(),
@@ -192,6 +193,7 @@ export function CommentSection({
                 name={comment.author.name}
                 position={comment.author.position}
                 department={comment.author.department}
+                avatarFile={comment.author.avatarFile}
                 size="sm"
               />
               <span className="text-xs text-muted-foreground">

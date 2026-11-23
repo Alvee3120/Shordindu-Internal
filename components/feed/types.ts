@@ -5,6 +5,7 @@ export interface FeedItemDto {
     name: string;
     position: string;
     department: string;
+    avatarFile: string | null;
   };
   updateDate: string;
   postedAt: string;

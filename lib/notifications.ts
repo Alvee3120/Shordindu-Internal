@@ -8,6 +8,12 @@ export interface NotificationDraft {
   type: string;
   message: string;
   link: string;
+  /**
+   * Bell-only notifications (group chat mentions) must never be emailed, so
+   * they are marked as "already emailed" when created and the digest skips
+   * that type.
+   */
+  email?: boolean;
 }
 
 /**
@@ -29,7 +35,16 @@ export async function createNotifications(
 
   if (rows.length === 0) return 0;
 
-  await prisma.notification.createMany({ data: rows });
+  const now = new Date();
+  await prisma.notification.createMany({
+    data: rows.map((draft) => ({
+      userId: draft.userId,
+      type: draft.type,
+      message: draft.message,
+      link: draft.link,
+      ...(draft.email === false ? { emailedAt: now } : {}),
+    })),
+  });
   return rows.length;
 }
 

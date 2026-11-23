@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Role, UserStatus, type User } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -24,7 +24,8 @@ function hashToken(token: string): string {
 
 function sessionMaxAgeSeconds(): number {
   const days = Number(process.env.SESSION_MAX_AGE_DAYS ?? DEFAULT_SESSION_DAYS);
-  const validDays = Number.isFinite(days) && days > 0 ? days : DEFAULT_SESSION_DAYS;
+  const validDays =
+    Number.isFinite(days) && days > 0 ? days : DEFAULT_SESSION_DAYS;
   return validDays * 24 * 60 * 60;
 }
 
@@ -43,7 +44,7 @@ function toSessionUser(user: User): SessionUser {
 
 /** Creates a session row and returns the raw token (only its hash is stored). */
 export async function issueSession(
-  userId: string,
+  userId: string
 ): Promise<{ token: string; expiresAt: Date }> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + sessionMaxAgeSeconds() * 1000);
@@ -57,7 +58,7 @@ export async function issueSession(
 
 /** Resolves a raw session token to an Active user, or null. */
 export async function findSessionUser(
-  token: string,
+  token: string
 ): Promise<SessionUser | null> {
   const session = await prisma.session.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -70,11 +71,23 @@ export async function findSessionUser(
   return toSessionUser(session.user);
 }
 
+/**
+ * A "Secure" cookie is silently dropped by the browser on plain HTTP, so the
+ * flag must follow the actual request protocol rather than NODE_ENV. Behind
+ * the nginx proxy that is the forwarded proto; without a proxy it falls back
+ * to APP_URL.
+ */
+function isSecureRequest(): boolean {
+  const forwarded = headers().get("x-forwarded-proto");
+  if (forwarded) return forwarded.split(",")[0].trim() === "https";
+  return (process.env.APP_URL ?? "").startsWith("https://");
+}
+
 export function setSessionCookie(token: string, expiresAt: Date): void {
   cookies().set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(),
     path: "/",
     expires: expiresAt,
   });
@@ -84,7 +97,7 @@ export function clearSessionCookie(): void {
   cookies().set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(),
     path: "/",
     maxAge: 0,
   });
@@ -113,6 +126,8 @@ export function accountStatusMessage(status: UserStatus): string {
       return "Your registration was not approved. Please contact your administrator.";
     case UserStatus.Disabled:
       return "Your account has been disabled. Please contact your administrator.";
+    case UserStatus.Deleted:
+      return "This account has been deleted. Please contact your administrator.";
     default:
       return "Your account is not ready. Please contact your administrator.";
   }

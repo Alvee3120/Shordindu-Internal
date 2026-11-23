@@ -6,11 +6,7 @@ import {
   formatFieldErrors,
   sendChatMessageSchema,
 } from "@/lib/validators";
-import {
-  chatError,
-  createMessage,
-  listMessages,
-} from "@/lib/chat";
+import { chatError, createMessage, listMessages } from "@/lib/chat";
 
 export async function GET(request: NextRequest) {
   const user = await requireUserApi();
@@ -43,11 +39,15 @@ export async function POST(request: NextRequest) {
         error: parsed.error.issues[0]?.message ?? "Check the message.",
         fieldErrors: formatFieldErrors(parsed.error),
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
-  const result = await createMessage(user, parsed.data.content);
+  const result = await createMessage(
+    user,
+    parsed.data.content,
+    parsed.data.replyToId
+  );
   if (!result.ok) {
     const { status, message } = chatError(result.reason);
     return NextResponse.json({ error: message }, { status });

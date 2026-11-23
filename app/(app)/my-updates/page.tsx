@@ -11,6 +11,7 @@ export default async function MyUpdatesPage() {
         name: user.name,
         position: user.position,
         department: user.department,
+        avatarFile: user.avatarFile,
       }}
       today={dhakaToday()}
     />

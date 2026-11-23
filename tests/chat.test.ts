@@ -82,7 +82,10 @@ afterAll(async () => {
 
 describe("createMessage", () => {
   it("lets any role post to the shared room", async () => {
-    const employee = await createUser({ name: "Employee", role: Role.Employee });
+    const employee = await createUser({
+      name: "Employee",
+      role: Role.Employee,
+    });
 
     const result = await createMessage(asActor(employee), "Hello everyone");
 
@@ -137,6 +140,77 @@ describe("createMessage", () => {
       select: { userId: true },
     });
     expect(notified.map((row) => row.userId)).toEqual([mentioned.id]);
+  });
+
+  it("links a reply to the message it answers", async () => {
+    const author = await createUser({ name: "Replier" });
+    const original = await createMessage(asActor(author), "Original question");
+    expect(original.ok).toBe(true);
+    if (!original.ok) return;
+    createdMessageIds.push(original.data.id);
+
+    const reply = await createMessage(
+      asActor(author),
+      "Answer",
+      original.data.id
+    );
+    expect(reply.ok).toBe(true);
+    if (!reply.ok) return;
+    createdMessageIds.push(reply.data.id);
+
+    expect(reply.data.replyTo?.id).toBe(original.data.id);
+    expect(reply.data.replyTo?.author.name).toBe("Replier");
+    expect(reply.data.replyTo?.content).toBe("Original question");
+
+    const page = await listMessages(asActor(author), { limit: 100 });
+    const listed = page.messages.find((item) => item.id === reply.data.id);
+    expect(listed?.replyTo?.id).toBe(original.data.id);
+  });
+
+  it("rejects a reply to a missing or deleted message", async () => {
+    const user = await createUser();
+
+    expect(
+      await createMessage(
+        asActor(user),
+        "Reply",
+        "00000000-0000-0000-0000-000000000000"
+      )
+    ).toEqual({ ok: false, reason: "invalid_reply" });
+
+    const original = await createMessage(asActor(user), "Will be deleted");
+    if (!original.ok) return;
+    createdMessageIds.push(original.data.id);
+
+    expect(await deleteMessage(asActor(user), original.data.id)).toEqual({
+      ok: true,
+      data: { id: original.data.id },
+    });
+    expect(
+      await createMessage(asActor(user), "Late reply", original.data.id)
+    ).toEqual({ ok: false, reason: "invalid_reply" });
+  });
+
+  it("shows a deleted reply target as a tombstone", async () => {
+    const user = await createUser({ name: "Tombstone" });
+    const original = await createMessage(asActor(user), "Soon gone");
+    if (!original.ok) return;
+    createdMessageIds.push(original.data.id);
+
+    const reply = await createMessage(
+      asActor(user),
+      "Still here",
+      original.data.id
+    );
+    if (!reply.ok) return;
+    createdMessageIds.push(reply.data.id);
+
+    await deleteMessage(asActor(user), original.data.id);
+
+    const page = await listMessages(asActor(user), { limit: 100 });
+    const listed = page.messages.find((item) => item.id === reply.data.id);
+    expect(listed?.replyTo?.deleted).toBe(true);
+    expect(listed?.replyTo?.content).toBe("");
   });
 
   it("keeps typed markup literal so nothing can run", async () => {
@@ -304,7 +378,11 @@ describe("editMessage and deleteMessage", () => {
     if (!created.ok) return;
     createdMessageIds.push(created.data.id);
 
-    const updated = await editMessage(asActor(other), created.data.id, "hacked");
+    const updated = await editMessage(
+      asActor(other),
+      created.data.id,
+      "hacked"
+    );
 
     expect(updated).toEqual({ ok: false, reason: "not_found" });
   });
@@ -321,7 +399,11 @@ describe("editMessage and deleteMessage", () => {
       data: { createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000) },
     });
 
-    const updated = await editMessage(asActor(user), created.data.id, "too late");
+    const updated = await editMessage(
+      asActor(user),
+      created.data.id,
+      "too late"
+    );
     const removed = await deleteMessage(asActor(user), created.data.id);
 
     expect(updated).toEqual({ ok: false, reason: "locked" });
@@ -339,9 +421,9 @@ describe("editMessage and deleteMessage", () => {
     expect(removed.ok).toBe(true);
 
     const room = await listMessages(asActor(user), { limit: 100 });
-    expect(room.messages.some((message) => message.id === created.data.id)).toBe(
-      false
-    );
+    expect(
+      room.messages.some((message) => message.id === created.data.id)
+    ).toBe(false);
 
     const row = await prisma.chatMessage.findUnique({
       where: { id: created.data.id },

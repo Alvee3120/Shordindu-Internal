@@ -5,6 +5,7 @@ import type { SessionUser } from "@/lib/auth";
 import {
   approveUser,
   createUserByAdmin,
+  deleteUser,
   listPendingUsers,
   rejectUser,
   searchUsers,
@@ -109,7 +110,7 @@ describe("approveUser", () => {
         role: "Admin",
         department: "IT",
         position: "Boss",
-      }),
+      })
     ).toEqual({ ok: false, reason: "cannot_grant_admin" });
   });
 
@@ -126,7 +127,7 @@ describe("approveUser", () => {
         role: "Employee",
         department: "IT",
         position: "Tester",
-      }),
+      })
     ).toEqual({ ok: false, reason: "unverified" });
   });
 
@@ -139,7 +140,7 @@ describe("approveUser", () => {
         role: "Employee",
         department: "IT",
         position: "Tester",
-      }),
+      })
     ).toEqual({ ok: false, reason: "not_pending" });
   });
 
@@ -155,7 +156,7 @@ describe("approveUser", () => {
         role: "Employee",
         department: "IT",
         position: "Tester",
-      }),
+      })
     ).toEqual({ ok: false, reason: "forbidden" });
   });
 });
@@ -177,6 +178,58 @@ describe("rejectUser", () => {
       where: { targetId: applicant.id, action: "user.rejected" },
     });
     expect(audit).not.toBeNull();
+  });
+});
+
+describe("deleteUser", () => {
+  it("soft-deletes a user, signs them out, hides them and audits it", async () => {
+    const admin = await createUser({ name: "Admin", role: Role.Admin });
+    const target = await createUser({ name: "Delete Me" });
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { passwordHash: "fake-hash" },
+    });
+    await prisma.session.create({
+      data: {
+        userId: target.id,
+        tokenHash: `delete-test-${target.id}`,
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    const result = await deleteUser(asActor(admin), target.id);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.status).toBe(UserStatus.Deleted);
+
+    const stored = await prisma.user.findUnique({ where: { id: target.id } });
+    expect(stored?.status).toBe(UserStatus.Deleted);
+    expect(stored?.passwordHash).toBeNull();
+    expect(await prisma.session.count({ where: { userId: target.id } })).toBe(
+      0
+    );
+
+    const audit = await prisma.auditLog.findFirst({
+      where: { targetId: target.id, action: "user.deleted" },
+    });
+    expect(audit).not.toBeNull();
+
+    const listed = await searchUsers(target.email);
+    expect(listed.map((user) => user.id)).not.toContain(target.id);
+  });
+
+  it("refuses non-admins and self-deletion", async () => {
+    const hr = await createUser({ role: Role.HR });
+    const target = await createUser({});
+    expect(await deleteUser(asActor(hr), target.id)).toEqual({
+      ok: false,
+      reason: "forbidden",
+    });
+
+    const admin = await createUser({ role: Role.Admin });
+    expect(await deleteUser(asActor(admin), admin.id)).toEqual({
+      ok: false,
+      reason: "self_change",
+    });
   });
 });
 
@@ -218,7 +271,7 @@ describe("createUserByAdmin", () => {
         department: "IT",
         position: "Admin",
         role: "Admin",
-      }),
+      })
     ).toEqual({ ok: false, reason: "cannot_grant_admin" });
   });
 
@@ -233,7 +286,7 @@ describe("createUserByAdmin", () => {
         department: "IT",
         position: "Tester",
         role: "Employee",
-      }),
+      })
     ).toEqual({ ok: false, reason: "email_exists" });
   });
 });
@@ -261,7 +314,7 @@ describe("updateUser", () => {
     const targetAdmin = await createUser({ role: Role.Admin });
 
     expect(
-      await updateUser(asActor(hr), targetAdmin.id, { role: "Employee" }),
+      await updateUser(asActor(hr), targetAdmin.id, { role: "Employee" })
     ).toEqual({ ok: false, reason: "cannot_manage_admin" });
   });
 
@@ -269,11 +322,11 @@ describe("updateUser", () => {
     const admin = await createUser({ role: Role.Admin });
 
     expect(
-      await updateUser(asActor(admin), admin.id, { role: "Manager" }),
+      await updateUser(asActor(admin), admin.id, { role: "Manager" })
     ).toEqual({ ok: false, reason: "self_change" });
 
     expect(
-      await updateUser(asActor(admin), admin.id, { status: "Disabled" }),
+      await updateUser(asActor(admin), admin.id, { status: "Disabled" })
     ).toEqual({ ok: false, reason: "self_change" });
   });
 
@@ -311,7 +364,7 @@ describe("updateUser", () => {
     });
 
     expect(
-      await updateUser(asActor(admin), pending.id, { status: "Active" }),
+      await updateUser(asActor(admin), pending.id, { status: "Active" })
     ).toEqual({ ok: false, reason: "invalid_status" });
   });
 
@@ -320,7 +373,7 @@ describe("updateUser", () => {
     const target = await createUser({ department: "IT" });
 
     expect(
-      await updateUser(asActor(admin), target.id, { department: "IT" }),
+      await updateUser(asActor(admin), target.id, { department: "IT" })
     ).toEqual({ ok: false, reason: "not_changed" });
   });
 });

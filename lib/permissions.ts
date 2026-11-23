@@ -70,6 +70,11 @@ export function canApproveLeave(role: MaybeRole): boolean {
   return hasAnyRole(role, APPROVERS);
 }
 
+/** Delete a user account (soft delete). */
+export function canDeleteUsers(role: MaybeRole): boolean {
+  return role === "Admin";
+}
+
 /** Open the audit log. */
 export function canViewAuditLog(role: MaybeRole): boolean {
   return role === "Admin";

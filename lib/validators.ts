@@ -176,6 +176,7 @@ export const sendChatMessageSchema = z.object({
     .trim()
     .min(1, "Write a message before sending")
     .max(5_000, "Keep messages under 5000 characters"),
+  replyToId: z.string().uuid().optional(),
 });
 
 export const chatMessageListQuerySchema = z.object({
@@ -335,7 +336,7 @@ export const updateCalendarEventSchema = z
       value.title !== undefined ||
       value.notes !== undefined ||
       value.date !== undefined,
-    { message: "Nothing to update" },
+    { message: "Nothing to update" }
   );
 
 export const calendarRangeSchema = z
@@ -386,6 +387,9 @@ export const announcementSchema = z.object({
     .string()
     .min(1, "Write the announcement")
     .max(20_000, "This announcement is too long"),
+  // Off by default: one announcement for a large team can consume a whole
+  // day's email allowance, so emailing is a deliberate choice.
+  sendEmail: z.boolean().optional().default(false),
 });
 
 export const updateAnnouncementSchema = z

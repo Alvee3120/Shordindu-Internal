@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Reply, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,13 @@ export function ChatMessage({
   isMine,
   onEdit,
   onDelete,
+  onReply,
 }: {
   message: ChatMessageDto;
   isMine: boolean;
   onEdit: (id: string, content: string) => Promise<string | null>;
   onDelete: (id: string) => Promise<string | null>;
+  onReply: (message: ChatMessageDto) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
@@ -66,7 +68,9 @@ export function ChatMessage({
         size="sm"
       />
 
-      <div className={cn("min-w-0 max-w-[85%] space-y-1", isMine && "items-end")}>
+      <div
+        className={cn("min-w-0 max-w-[85%] space-y-1", isMine && "items-end")}
+      >
         <div
           className={cn(
             "flex flex-wrap items-baseline gap-2 text-xs",
@@ -118,6 +122,36 @@ export function ChatMessage({
               isMine && "[&_.mention]:text-primary-foreground"
             )}
           >
+            {message.replyTo ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById(`message-${message.replyTo?.id}`)
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                }
+                className={cn(
+                  "mb-1.5 block w-full rounded-md border-l-2 px-2 py-1 text-left text-xs",
+                  isMine
+                    ? "border-primary-foreground/60 bg-black/10"
+                    : "border-primary bg-background/70"
+                )}
+              >
+                <span className="block font-semibold">
+                  {message.replyTo.author.name}
+                </span>
+                <span
+                  className={cn(
+                    "line-clamp-2 break-words opacity-80",
+                    message.replyTo.deleted && "italic"
+                  )}
+                >
+                  {message.replyTo.deleted
+                    ? "Message deleted"
+                    : message.replyTo.content}
+                </span>
+              </button>
+            ) : null}
             <CommentText content={message.content} />
           </div>
         )}
@@ -129,30 +163,45 @@ export function ChatMessage({
         ) : null}
       </div>
 
-      {message.canEdit && !editing ? (
-        <div className="flex shrink-0 items-start gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+      {!editing ? (
+        <div className="flex shrink-0 items-start gap-0.5 opacity-0 transition focus-within:opacity-100 group-hover:opacity-100">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => setEditing(true)}
+            onClick={() => onReply(message)}
             disabled={busy}
-            aria-label="Edit message"
+            aria-label="Reply to message"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Reply className="h-3.5 w-3.5" />
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={remove}
-            disabled={busy}
-            aria-label="Delete message"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {message.canEdit ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setEditing(true)}
+                disabled={busy}
+                aria-label="Edit message"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={remove}
+                disabled={busy}
+                aria-label="Delete message"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>

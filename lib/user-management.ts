@@ -2,7 +2,12 @@ import { Prisma, Role, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import type { SessionUser } from "@/lib/auth";
-import { canManageUsers, canSetRole, type UserRole } from "@/lib/permissions";
+import {
+  canDeleteUsers,
+  canManageUsers,
+  canSetRole,
+  type UserRole,
+} from "@/lib/permissions";
 import { getDepartments } from "@/lib/settings";
 import { getOnLeaveUserIds } from "@/lib/attendance";
 
@@ -45,11 +50,11 @@ export type UserManagementFailure =
   | "invalid_department"
   | "self_change"
   | "invalid_status"
+  | "last_admin"
   | "not_changed";
 
 export type UserManagementResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; reason: UserManagementFailure };
+  { ok: true; data: T } | { ok: false; reason: UserManagementFailure };
 
 function fail<T>(reason: UserManagementFailure): UserManagementResult<T> {
   return { ok: false, reason };
@@ -70,7 +75,10 @@ export function userManagementError(reason: UserManagementFailure): {
         message: "This user has not verified their email yet.",
       };
     case "cannot_grant_admin":
-      return { status: 403, message: "Only an Admin can grant the Admin role." };
+      return {
+        status: 403,
+        message: "Only an Admin can grant the Admin role.",
+      };
     case "cannot_manage_admin":
       return {
         status: 403,
@@ -93,6 +101,11 @@ export function userManagementError(reason: UserManagementFailure): {
         status: 409,
         message: "Only active or disabled accounts can be changed here.",
       };
+    case "last_admin":
+      return {
+        status: 409,
+        message: "You cannot delete the last active Admin.",
+      };
     case "not_changed":
       return { status: 400, message: "Nothing to update." };
     default:
@@ -111,21 +124,25 @@ export async function listPendingUsers(): Promise<PendingUser[]> {
 
 /** All users, optionally filtered, with today's leave flag. */
 export async function searchUsers(
-  query = "",
+  query = ""
 ): Promise<(PublicUser & { onLeaveToday: boolean })[]> {
   const search = query.trim();
   const [users, onLeave] = await Promise.all([
     prisma.user.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { department: { contains: search, mode: "insensitive" } },
-              { position: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : undefined,
+      where: {
+        // Deleted accounts stay in the database but disappear from the app.
+        status: { not: UserStatus.Deleted },
+        ...(search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { email: { contains: search, mode: "insensitive" } },
+                { department: { contains: search, mode: "insensitive" } },
+                { position: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       select: publicUserSelect,
       orderBy: { createdAt: "desc" },
       take: 200,
@@ -142,7 +159,7 @@ export async function searchUsers(
 export async function approveUser(
   actor: SessionUser,
   targetId: string,
-  input: { role: UserRole; department: string; position: string },
+  input: { role: UserRole; department: string; position: string }
 ): Promise<UserManagementResult<PublicUser>> {
   if (!canManageUsers(actor.role)) return fail("forbidden");
   if (!canSetRole(actor.role, input.role)) return fail("cannot_grant_admin");
@@ -190,7 +207,7 @@ export async function approveUser(
         beforeJson: before,
         afterJson: after,
       },
-      tx,
+      tx
     );
     return user;
   });
@@ -200,7 +217,7 @@ export async function approveUser(
 
 export async function rejectUser(
   actor: SessionUser,
-  targetId: string,
+  targetId: string
 ): Promise<UserManagementResult<PublicUser>> {
   if (!canManageUsers(actor.role)) return fail("forbidden");
 
@@ -223,7 +240,7 @@ export async function rejectUser(
         beforeJson: { status: target.status },
         afterJson: { status: UserStatus.Rejected },
       },
-      tx,
+      tx
     );
     return user;
   });
@@ -239,7 +256,7 @@ export async function createUserByAdmin(
     department: string;
     position: string;
     role: UserRole;
-  },
+  }
 ): Promise<UserManagementResult<PublicUser>> {
   if (!canManageUsers(actor.role)) return fail("forbidden");
   if (!canSetRole(actor.role, input.role)) return fail("cannot_grant_admin");
@@ -283,7 +300,7 @@ export async function createUserByAdmin(
             status: UserStatus.Active,
           },
         },
-        tx,
+        tx
       );
       return user;
     });
@@ -307,7 +324,7 @@ export async function updateUser(
     role?: UserRole;
     department?: string;
     status?: "Active" | "Disabled";
-  },
+  }
 ): Promise<UserManagementResult<PublicUser>> {
   if (!canManageUsers(actor.role)) return fail("forbidden");
 
@@ -400,9 +417,70 @@ export async function updateUser(
           beforeJson: entry.before,
           afterJson: entry.after,
         },
-        tx,
+        tx
       );
     }
+    return user;
+  });
+
+  return { ok: true, data: updated };
+}
+
+/**
+ * Soft-deletes a user: the row and everything they wrote stay, but the account
+ * is marked Deleted, cannot sign in and no longer appears in user lists.
+ * Only an Admin may do this.
+ */
+export async function deleteUser(
+  actor: SessionUser,
+  targetId: string
+): Promise<UserManagementResult<PublicUser>> {
+  if (!canDeleteUsers(actor.role)) return fail("forbidden");
+  if (actor.id === targetId) return fail("self_change");
+
+  const target = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!target) return fail("not_found");
+  if (target.status === UserStatus.Deleted) return fail("not_changed");
+
+  if (target.role === Role.Admin) {
+    const otherActiveAdmins = await prisma.user.count({
+      where: {
+        role: Role.Admin,
+        status: UserStatus.Active,
+        id: { not: targetId },
+      },
+    });
+    if (otherActiveAdmins === 0) return fail("last_admin");
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: { id: targetId },
+      data: { status: UserStatus.Deleted, passwordHash: null },
+      select: publicUserSelect,
+    });
+    // Sign them out everywhere and drop anything that could still grant access.
+    await tx.session.deleteMany({ where: { userId: targetId } });
+    await tx.otpCode.deleteMany({ where: { email: target.email } });
+    await tx.loginAttempt.deleteMany({ where: { email: target.email } });
+
+    await logAudit(
+      {
+        actorId: actor.id,
+        action: "user.deleted",
+        targetType: "user",
+        targetId,
+        beforeJson: {
+          name: target.name,
+          email: target.email,
+          role: target.role,
+          status: target.status,
+        },
+        afterJson: { status: UserStatus.Deleted },
+      },
+      tx
+    );
+
     return user;
   });
 

@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowDown, Loader2, MessageSquare, Send } from "lucide-react";
+import { ArrowDown, Loader2, MessageSquare, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommentInput } from "@/components/interactions/comment-input";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { callApi, callApiJson, fetchJson } from "@/components/api-client";
 import { useToast } from "@/components/ui/toast";
 import { formatDhakaDate, toDhakaDate } from "@/lib/time";
+import { stripMentionTokens } from "@/lib/mentions";
 import type { ChatMessageDto } from "@/components/chat/types";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -44,6 +45,7 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [replyTo, setReplyTo] = useState<ChatMessageDto | null>(null);
   const [sending, setSending] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -140,7 +142,8 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
     // StrictMode), so reading a flag from inside it is unreliable.
     const removed = new Set(deletedIds);
     const known = new Set(messagesRef.current.map((message) => message.id));
-    const previousNewest = messagesRef.current[messagesRef.current.length - 1]?.createdAt;
+    const previousNewest =
+      messagesRef.current[messagesRef.current.length - 1]?.createdAt;
     const fresh = changed
       .filter(
         (message) =>
@@ -215,16 +218,15 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
     });
   }
 
-  async function send(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitMessage() {
     const content = draft.trim();
-    if (!content) return;
+    if (!content || sending) return;
 
     setSending(true);
     const result = await callApiJson<{ message: ChatMessageDto }>(
       "/api/chat",
       "POST",
-      { content }
+      { content, ...(replyTo ? { replyToId: replyTo.id } : {}) }
     );
     setSending(false);
 
@@ -234,6 +236,7 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
     }
 
     setDraft("");
+    setReplyTo(null);
     setMessages((previous) => {
       if (previous.some((item) => item.id === result.data!.message.id)) {
         return previous;
@@ -244,7 +247,15 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
     stickToBottomRef.current = "smooth";
   }
 
-  async function editMessage(id: string, content: string): Promise<string | null> {
+  async function send(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitMessage();
+  }
+
+  async function editMessage(
+    id: string,
+    content: string
+  ): Promise<string | null> {
     const result = await callApiJson<{ message: ChatMessageDto }>(
       `/api/chat/${id}`,
       "PATCH",
@@ -255,9 +266,7 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
     }
 
     setMessages((previous) =>
-      previous.map((item) =>
-        item.id === id ? result.data!.message : item
-      )
+      previous.map((item) => (item.id === id ? result.data!.message : item))
     );
     return null;
   }
@@ -352,6 +361,7 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
                       isMine={message.author.id === viewer.id}
                       onEdit={editMessage}
                       onDelete={deleteMessage}
+                      onReply={setReplyTo}
                     />
                   </div>
                 );
@@ -373,23 +383,42 @@ export function ChatView({ viewer }: { viewer: Viewer }) {
           </Button>
         ) : null}
 
-        <form
-          onSubmit={send}
-          className="flex items-end gap-2 border-t border-border p-3"
-        >
-          <div className="flex-1">
-            <CommentInput
-              value={draft}
-              onChange={setDraft}
-              placeholder="Write a message, type @ to mention someone"
-              rows={2}
-              disabled={sending}
-            />
+        <form onSubmit={send} className="space-y-2 border-t border-border p-3">
+          {replyTo ? (
+            <div className="flex items-start justify-between gap-2 rounded-md border-l-2 border-primary bg-secondary px-2 py-1.5 text-xs">
+              <div className="min-w-0">
+                <p className="font-medium">Replying to {replyTo.author.name}</p>
+                <p className="line-clamp-2 break-words text-muted-foreground">
+                  {stripMentionTokens(replyTo.content)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                aria-label="Cancel reply"
+                className="shrink-0 rounded p-0.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <CommentInput
+                value={draft}
+                onChange={setDraft}
+                onSubmit={() => void submitMessage()}
+                placeholder="Write a message, type @ to mention someone"
+                rows={2}
+                disabled={sending}
+              />
+            </div>
+            <Button type="submit" disabled={sending || !draft.trim()}>
+              <Send className="mr-1.5 h-4 w-4" />
+              {sending ? "Sending" : "Send"}
+            </Button>
           </div>
-          <Button type="submit" disabled={sending || !draft.trim()}>
-            <Send className="mr-1.5 h-4 w-4" />
-            {sending ? "Sending" : "Send"}
-          </Button>
         </form>
       </div>
     </div>
