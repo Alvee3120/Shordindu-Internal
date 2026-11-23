@@ -254,26 +254,11 @@ export async function createUserByAdmin(
   });
   if (existing) return fail("email_exists");
 
-  const created = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
-      // Active immediately; no password yet, so the invite tells them to set one.
-      data: {
-        name: input.name,
-        email: input.email,
-        department: input.department,
-        position: input.position,
-        role: input.role,
-        status: UserStatus.Active,
-      },
-      select: publicUserSelect,
-    });
-    await logAudit(
-      {
-        actorId: actor.id,
-        action: "user.created",
-        targetType: "user",
-        targetId: user.id,
-        afterJson: {
+  try {
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        // Active immediately; no password yet, so the invite tells them to set one.
+        data: {
           name: input.name,
           email: input.email,
           department: input.department,
@@ -281,13 +266,38 @@ export async function createUserByAdmin(
           role: input.role,
           status: UserStatus.Active,
         },
-      },
-      tx,
-    );
-    return user;
-  });
+        select: publicUserSelect,
+      });
+      await logAudit(
+        {
+          actorId: actor.id,
+          action: "user.created",
+          targetType: "user",
+          targetId: user.id,
+          afterJson: {
+            name: input.name,
+            email: input.email,
+            department: input.department,
+            position: input.position,
+            role: input.role,
+            status: UserStatus.Active,
+          },
+        },
+        tx,
+      );
+      return user;
+    });
 
-  return { ok: true, data: created };
+    return { ok: true, data: created };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return fail("email_exists");
+    }
+    throw error;
+  }
 }
 
 export async function updateUser(

@@ -7,4 +7,5 @@
 ## Tooling
 
 - Doesn't want to use Docker for local development right now; prefers running the database natively (local PostgreSQL install or a private local cluster) and keeping Docker Compose around only as a later option. Confidence: 0.7
+- When adding new required config keys, expects the actual local `.env` to be updated as well as `.env.example` — updating only the committed template is a miss (with empty placeholders left for secrets). Confidence: 0.7
 - Wants security/abuse guards (e.g. the failed-login lockout) active in production but bypassed in development, so manual testing isn't blocked — environment-gated, not removed. Confidence: 0.6

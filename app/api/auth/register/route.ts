@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { UserStatus } from "@prisma/client";
+import { Prisma, UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getDepartments } from "@/lib/settings";
 import { getClientIp, readJsonBody } from "@/lib/http";
@@ -58,17 +58,32 @@ export async function POST(request: NextRequest) {
     });
     userId = updated.id;
   } else {
-    const created = await prisma.user.create({
-      data: {
-        name,
-        department,
-        position,
-        email,
-        phone,
-        passwordHash,
-        status: UserStatus.Pending,
-      },
-    });
+    let created;
+    try {
+      created = await prisma.user.create({
+        data: {
+          name,
+          department,
+          position,
+          email,
+          phone,
+          passwordHash,
+          status: UserStatus.Pending,
+        },
+      });
+    } catch (error) {
+      // A second submit can pass the lookup at the same time as the first.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        return NextResponse.json(
+          { error: "An account with this email already exists." },
+          { status: 409 },
+        );
+      }
+      throw error;
+    }
     userId = created.id;
     await logAudit({
       actorId: userId,

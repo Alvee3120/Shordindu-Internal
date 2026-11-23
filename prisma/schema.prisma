@@ -366,3 +366,13 @@ model JobRun {
   @@index([runDate])
   @@map("job_runs")
 }
+
+// Per-account, per-Dhaka-day send counter. Guards the Brevo daily cap.
+model EmailAccountUsage {
+  account String
+  day     DateTime @db.Date
+  used    Int      @default(0)
+
+  @@id([account, day])
+  @@map("email_account_usage")
+}

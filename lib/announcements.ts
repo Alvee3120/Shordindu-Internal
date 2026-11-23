@@ -186,6 +186,7 @@ export function buildAnnouncementEmail({
   return {
     to,
     subject: `New announcement: ${title} - Shordindu Internal`,
+    account: "bulk",
     text: [
       `Hi ${name},`,
       "",

@@ -1,5 +1,10 @@
-import { PgBoss, type Job } from "pg-boss";
-import { sendEmail, type EmailPayload } from "@/lib/email";
+import { PgBoss, type Job, type JobResult } from "pg-boss";
+import {
+  EmailQuotaExceededError,
+  classifyEmailFailure,
+  sendEmail,
+  type EmailPayload,
+} from "@/lib/email";
 import { processPendingDigests } from "@/jobs/digest";
 import {
   runAssignmentDueReminder,
@@ -87,10 +92,31 @@ async function bootstrap(): Promise<PgBoss> {
 
   await boss.work<EmailPayload>(
     EMAIL_QUEUE,
-    async (jobs: Job<EmailPayload>[]) => {
+    { perJobResults: true },
+    async (jobs: Job<EmailPayload>[]): Promise<JobResult[]> => {
+      const results: JobResult[] = [];
+
       for (const job of jobs) {
-        await sendEmail(job.data);
+        try {
+          await sendEmail(job.data);
+          results.push({ id: job.id, status: "completed" });
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+
+          if (classifyEmailFailure(error) === "drop") {
+            // Unknown outcome or a spent daily quota: retrying would either
+            // send a duplicate or burn the remaining attempts for nothing.
+            console.warn(
+              `[email] dropped job ${job.id} to ${job.data.to}: ${detail}`,
+            );
+            results.push({ id: job.id, status: "deadletter", output: detail });
+          } else {
+            results.push({ id: job.id, status: "failed", output: detail });
+          }
+        }
       }
+
+      return results;
     },
   );
 

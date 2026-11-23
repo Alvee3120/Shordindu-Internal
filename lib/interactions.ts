@@ -151,26 +151,23 @@ export async function toggleReaction(
     return { ok: false, reason: "not_found" };
   }
 
-  const existing = await prisma.reaction.findUnique({
-    where: {
-      targetType_targetId_userId: {
-        targetType,
-        targetId,
-        userId: actor.id,
-      },
-    },
+  // Delete-then-upsert keeps a double-click race from hitting the unique
+  // constraint: two wins on the same row become one create and one update.
+  const removed = await prisma.reaction.deleteMany({
+    where: { targetType, targetId, userId: actor.id, kind },
   });
 
-  if (existing?.kind === kind) {
-    await prisma.reaction.delete({ where: { id: existing.id } });
-  } else if (existing) {
-    await prisma.reaction.update({
-      where: { id: existing.id },
-      data: { kind },
-    });
-  } else {
-    await prisma.reaction.create({
-      data: { targetType, targetId, userId: actor.id, kind },
+  if (removed.count === 0) {
+    await prisma.reaction.upsert({
+      where: {
+        targetType_targetId_userId: {
+          targetType,
+          targetId,
+          userId: actor.id,
+        },
+      },
+      update: { kind },
+      create: { targetType, targetId, userId: actor.id, kind },
     });
   }
 

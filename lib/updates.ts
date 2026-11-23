@@ -1,4 +1,4 @@
-import { type Update, TargetType } from "@prisma/client";
+import { Prisma, type Update, TargetType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { dhakaToday, isSameDhakaDay } from "@/lib/time";
@@ -131,34 +131,47 @@ export async function createUpdate(
   });
   if (existing) return { ok: false, reason: "duplicate" };
 
-  const created = await prisma.$transaction(async (tx) => {
-    const update = await tx.update.create({
-      data: {
-        userId: actor.id,
-        contentHtml: html,
-        contentText: text,
-        updateDate,
-        postedAt,
-        isLate,
-      },
-    });
-    await replaceMentions(tx, TargetType.update, update.id, html);
-    await logAudit(
-      {
-        actorId: actor.id,
-        action: "update.created",
-        targetType: "update",
-        targetId: update.id,
-        afterJson: {
-          updateDate: dateStringOf(updateDate),
-          isLate,
+  let created: Update;
+  try {
+    created = await prisma.$transaction(async (tx) => {
+      const update = await tx.update.create({
+        data: {
+          userId: actor.id,
           contentHtml: html,
+          contentText: text,
+          updateDate,
+          postedAt,
+          isLate,
         },
-      },
-      tx,
-    );
-    return update;
-  });
+      });
+      await replaceMentions(tx, TargetType.update, update.id, html);
+      await logAudit(
+        {
+          actorId: actor.id,
+          action: "update.created",
+          targetType: "update",
+          targetId: update.id,
+          afterJson: {
+            updateDate: dateStringOf(updateDate),
+            isLate,
+            contentHtml: html,
+          },
+        },
+        tx,
+      );
+      return update;
+    });
+  } catch (error) {
+    // Two submits for the same day can pass the lookup together; the unique
+    // (user, date) constraint settles it, so report the second as a duplicate.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { ok: false, reason: "duplicate" };
+    }
+    throw error;
+  }
 
   try {
     await notifyUpdateMentions({

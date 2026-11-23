@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { canManageHolidays } from "@/lib/permissions";
@@ -56,24 +57,34 @@ export async function createHoliday(
   const existing = await prisma.holiday.findUnique({ where: { date } });
   if (existing) return { ok: false, reason: "duplicate" };
 
-  const holiday = await prisma.$transaction(async (tx) => {
-    const created = await tx.holiday.create({
-      data: { date, name: input.name },
+  try {
+    const holiday = await prisma.$transaction(async (tx) => {
+      const created = await tx.holiday.create({
+        data: { date, name: input.name },
+      });
+      await logAudit(
+        {
+          actorId: actor.id,
+          action: "holiday.created",
+          targetType: "holiday",
+          targetId: created.id,
+          afterJson: { date: input.date, name: input.name },
+        },
+        tx,
+      );
+      return created;
     });
-    await logAudit(
-      {
-        actorId: actor.id,
-        action: "holiday.created",
-        targetType: "holiday",
-        targetId: created.id,
-        afterJson: { date: input.date, name: input.name },
-      },
-      tx,
-    );
-    return created;
-  });
 
-  return { ok: true, holiday };
+    return { ok: true, holiday };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { ok: false, reason: "duplicate" };
+    }
+    throw error;
+  }
 }
 
 export async function updateHoliday(
@@ -96,29 +107,37 @@ export async function updateHoliday(
     if (existing) return { ok: false, reason: "duplicate" };
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
-    const saved = await tx.holiday.update({
-      where: { id: holidayId },
-      data: { date, name },
-    });
-    await logAudit(
-      {
-        actorId: actor.id,
-        action: "holiday.edited",
-        targetType: "holiday",
-        targetId: holidayId,
-        beforeJson: {
-          date: dateOnlyString(holiday.date),
-          name: holiday.name,
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const saved = await tx.holiday.update({
+        where: { id: holidayId },
+        data: { date, name },
+      });
+      await logAudit(
+        {
+          actorId: actor.id,
+          action: "holiday.edited",
+          targetType: "holiday",
+          targetId: holidayId,
+          beforeJson: {
+            date: dateOnlyString(holiday.date),
+            name: holiday.name,
+          },
+          afterJson: { date: dateOnlyString(date), name },
         },
-        afterJson: { date: dateOnlyString(date), name },
-      },
-      tx,
-    );
-    return saved;
-  });
+        tx,
+      );
+      return saved;
+    });
 
-  return { ok: true, holiday: updated };
+    return { ok: true, holiday: updated };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") return { ok: false, reason: "duplicate" };
+      if (error.code === "P2025") return { ok: false, reason: "not_found" };
+    }
+    throw error;
+  }
 }
 
 export async function deleteHoliday(
@@ -130,22 +149,32 @@ export async function deleteHoliday(
   const holiday = await prisma.holiday.findUnique({ where: { id: holidayId } });
   if (!holiday) return { ok: false, reason: "not_found" };
 
-  await prisma.$transaction(async (tx) => {
-    await tx.holiday.delete({ where: { id: holidayId } });
-    await logAudit(
-      {
-        actorId: actor.id,
-        action: "holiday.deleted",
-        targetType: "holiday",
-        targetId: holidayId,
-        beforeJson: {
-          date: dateOnlyString(holiday.date),
-          name: holiday.name,
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.holiday.delete({ where: { id: holidayId } });
+      await logAudit(
+        {
+          actorId: actor.id,
+          action: "holiday.deleted",
+          targetType: "holiday",
+          targetId: holidayId,
+          beforeJson: {
+            date: dateOnlyString(holiday.date),
+            name: holiday.name,
+          },
         },
-      },
-      tx,
-    );
-  });
+        tx,
+      );
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return { ok: false, reason: "not_found" };
+    }
+    throw error;
+  }
 
   return { ok: true };
 }

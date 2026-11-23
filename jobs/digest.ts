@@ -1,6 +1,11 @@
 import { UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { appUrl, sendEmail, type EmailPayload } from "@/lib/email";
+import {
+  appUrl,
+  EmailQuotaExceededError,
+  sendEmail,
+  type EmailPayload,
+} from "@/lib/email";
 
 interface PendingNotification {
   id: string;
@@ -56,6 +61,8 @@ export function buildDigestEmail(
     to: user.email,
     subject,
     text,
+    account: "bulk",
+    priority: "low",
     html: `<p>Hi ${escapeHtml(user.name)},</p><ul>${items}</ul><p><a href="${base}">Open Shordindu Internal</a></p>`,
   };
 }
@@ -94,6 +101,7 @@ export async function processPendingDigests(
 
   const now = new Date();
   let emails = 0;
+  let handled = 0;
 
   const entries = Array.from(groups.values());
   for (const rows of entries) {
@@ -105,7 +113,14 @@ export async function processPendingDigests(
         rows.map((row) => ({ message: row.message, link: row.link })),
       );
       if (payload) {
-        await send(payload);
+        try {
+          await send(payload);
+        } catch (error) {
+          // Out of bulk allowance: leave these rows unmarked so the next run
+          // after the daily reset sends them. Nothing is lost.
+          if (error instanceof EmailQuotaExceededError) break;
+          throw error;
+        }
         emails++;
       }
     }
@@ -114,7 +129,8 @@ export async function processPendingDigests(
       where: { id: { in: rows.map((row) => row.id) } },
       data: { emailedAt: now },
     });
+    handled += rows.length;
   }
 
-  return { emails, notifications: pending.length };
+  return { emails, notifications: handled };
 }
